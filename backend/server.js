@@ -6,6 +6,7 @@ const connectDB = require("./config/db");
 // Routes
 const authRoutes = require("./routes/authRoutes");
 const inventoryRoutes = require("./routes/inventoryRoutes");
+const salesRoutes = require("./routes/salesRoutes");
 
 // Initialize Express app
 const app = express();
@@ -21,6 +22,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/inventory", inventoryRoutes);
+app.use("/api/sales", salesRoutes);
 
 // Basic route for testing
 app.get("/", (req, res) => {
