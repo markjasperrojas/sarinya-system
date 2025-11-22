@@ -1,17 +1,19 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
+// src/index.js (top of file)
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import { setAuthToken } from "./api";
+import "./index.css"; // tailwind
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
+// Restore token from localStorage so axios keeps the header after refresh
+const token = localStorage.getItem("sarinya_token");
+if (token) {
+  setAuthToken(token);
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
 );
-
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
