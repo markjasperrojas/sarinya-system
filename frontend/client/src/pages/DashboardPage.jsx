@@ -17,9 +17,9 @@ export default function DashboardPage() {
       <h1 className="text-2xl font-bold">Dashboard</h1>
       <div className="mt-6 space-x-4">
         <Link to="/inventory">Go to Inventory</Link>
-        <a href="/sales" className="px-4 py-2 bg-blue-600 text-white rounded">
-          Sales
-        </a>
+        <Link to="/sales" className="text-blue-600">
+          Go to Sales
+        </Link>
       </div>
     </div>
   );
