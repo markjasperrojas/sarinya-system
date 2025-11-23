@@ -4,6 +4,7 @@ import {
   addInventoryItem,
   deleteInventoryItem,
 } from "../services/inventoryService";
+import { Link } from "react-router-dom";
 
 export default function InventoryPage() {
   const [items, setItems] = useState([]);
@@ -145,6 +146,7 @@ export default function InventoryPage() {
           </tbody>
         </table>
       </div>
+      <Link to="/dashboard">Go to dashboard</Link>
     </div>
   );
 }

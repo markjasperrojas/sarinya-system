@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import API from "../api";
+import { Link } from "react-router-dom";
 
 export default function SalesPage() {
   const [sales, setSales] = useState([]);
@@ -111,6 +112,7 @@ export default function SalesPage() {
           </tbody>
         </table>
       </div>
+      <Link to="/dashboard">Go to dashboard</Link>
     </div>
   );
 }
