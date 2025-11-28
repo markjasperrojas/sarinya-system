@@ -1,4 +1,3 @@
-// src/services/authService.js
 import API, { setAuthToken } from "../api";
 
 export const login = async (username, password) => {
