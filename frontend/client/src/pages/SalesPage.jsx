@@ -126,6 +126,14 @@ export default function SalesPage() {
                     </td>
                   </tr>
                 ))}
+
+                {sales.length === 0 && (
+                  <tr>
+                    <td colSpan="6" className="text-center p-4 text-gray-500">
+                      No sales yet.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
