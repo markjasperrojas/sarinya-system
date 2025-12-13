@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import {
   getInventoryItems,
   addInventoryItem,
-  deleteInventoryItem,
 } from "../services/inventoryService";
+import API from "../api";
 import { Link } from "react-router-dom";
 
 export default function InventoryPage() {
@@ -49,14 +49,15 @@ export default function InventoryPage() {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDeleteInventory = async (id) => {
     if (!window.confirm("Delete this item?")) return;
 
     try {
-      await deleteInventoryItem(id);
-      loadItems();
+      await API.delete(`/inventory/${id}`);
+      loadItems(); // refresh list
     } catch (error) {
-      console.error("Delete failed:", error);
+      console.log("Delete inventory failed:", error);
+      alert("Failed to delete sale");
     }
   };
 
@@ -129,8 +130,8 @@ export default function InventoryPage() {
                     <td className="p-3 border">{item.unit}</td>
                     <td className="p-3 border text-center">
                       <button
-                        onClick={() => handleDelete(item._id)}
-                        className="px-3 py-1 bg-red-600 text-white rounded text-xs"
+                        onClick={() => handleDeleteInventory(item._id)}
+                        className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
                       >
                         Delete
                       </button>

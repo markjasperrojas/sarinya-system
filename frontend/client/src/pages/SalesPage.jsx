@@ -45,6 +45,18 @@ export default function SalesPage() {
 
   const overallTotal = sales.reduce((sum, sale) => sum + sale.total, 0);
 
+  const handleDeleteSale = async (id) => {
+    if (!window.confirm("Delete this sale?")) return;
+
+    try {
+      await API.delete(`/sales/${id}`);
+      loadSales(); // refresh list
+    } catch (error) {
+      console.log("Delete sale failed:", error);
+      alert("Failed to delete sale");
+    }
+  };
+
   return (
     <div className="p-8 text-base">
       <h1 className="text-4xl font-bold mb-10 text-center">Sales Management</h1>
@@ -118,8 +130,8 @@ export default function SalesPage() {
 
                     <td className="p-3 border text-center">
                       <button
-                        className="px-3 py-1 bg-red-500 text-white rounded text-xs opacity-70 cursor-not-allowed"
-                        title="Delete"
+                        onClick={() => handleDeleteSale(sale._id)}
+                        className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
                       >
                         Delete
                       </button>
