@@ -8,5 +8,6 @@ router.post("/add", authMiddleware, inventoryController.addItem);
 router.get("/", authMiddleware, inventoryController.getItems);
 router.put("/:id", authMiddleware, inventoryController.updateItem);
 router.delete("/:id", authMiddleware, inventoryController.deleteItem);
+router.post("/:id/sell", authMiddleware, inventoryController.sellItem);
 
 module.exports = router;

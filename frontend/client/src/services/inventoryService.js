@@ -23,3 +23,9 @@ export const deleteInventoryItem = async (id) => {
   const res = await API.delete(`/inventory/delete/${id}`);
   return res.data;
 };
+
+// SELL item
+export const sellInventoryItem = async (id, quantity) => {
+  const res = await API.post(`/inventory/${id}/sell`, { quantity });
+  return res.data;
+};

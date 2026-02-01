@@ -1,12 +1,9 @@
 import { useEffect, useState } from "react";
 import API from "../api";
 import { Link } from "react-router-dom";
-import Modal from "../components/Modal";
 import Button from "../components/Button";
-import Input from "../components/Input";
 import TableSkeleton from "../components/TableSkeleton";
 import {
-  Plus,
   Trash2,
   ArrowLeft,
   ShoppingCart,
@@ -16,13 +13,8 @@ import {
 
 export default function SalesPage() {
   const [sales, setSales] = useState([]);
-  const [itemName, setItemName] = useState("");
-  const [quantity, setQuantity] = useState("");
-  const [price, setPrice] = useState("");
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const loadSales = async () => {
     setLoading(true);
@@ -40,31 +32,6 @@ export default function SalesPage() {
     loadSales();
   }, []);
 
-  const handleAddSale = async (e) => {
-    e.preventDefault();
-
-    setSubmitting(true);
-    try {
-      await API.post("/sales/add", {
-        itemName,
-        quantity: Number(quantity),
-        price: Number(price),
-        total: Number(quantity) * Number(price),
-      });
-
-      setItemName("");
-      setQuantity("");
-      setPrice("");
-      setIsModalOpen(false);
-      loadSales();
-    } catch (error) {
-      console.log("Error adding sale:", error);
-      alert("Failed to add sale");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleDeleteSale = async (id) => {
     if (!window.confirm("Are you sure you want to delete this sale?")) return;
 
@@ -80,15 +47,7 @@ export default function SalesPage() {
     }
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setItemName("");
-    setQuantity("");
-    setPrice("");
-  };
-
   const overallTotal = sales.reduce((sum, sale) => sum + sale.total, 0);
-  const previewTotal = Number(quantity || 0) * Number(price || 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -108,14 +67,6 @@ export default function SalesPage() {
               </div>
             </div>
 
-            <Button
-              variant="success"
-              icon={Plus}
-              onClick={() => setIsModalOpen(true)}
-            >
-              <span className="hidden sm:inline">Add Sale</span>
-              <span className="sm:hidden">Add</span>
-            </Button>
           </div>
         </div>
       </header>
@@ -147,7 +98,7 @@ export default function SalesPage() {
 
           {loading ? (
             <div className="p-6">
-              <TableSkeleton rows={5} columns={6} />
+              <TableSkeleton rows={5} columns={5} />
             </div>
           ) : (
             <div className="overflow-x-auto custom-scrollbar">
@@ -159,9 +110,6 @@ export default function SalesPage() {
                     </th>
                     <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
                       Qty
-                    </th>
-                    <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                      Price
                     </th>
                     <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
                       Total
@@ -187,9 +135,6 @@ export default function SalesPage() {
                       </td>
                       <td className="px-6 py-4 text-gray-600">
                         {sale.quantity}
-                      </td>
-                      <td className="px-6 py-4 text-gray-600">
-                        ₱{sale.price.toLocaleString()}
                       </td>
                       <td className="px-6 py-4">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-semibold bg-success-100 text-success-800">
@@ -218,13 +163,13 @@ export default function SalesPage() {
 
                   {sales.length === 0 && !loading && (
                     <tr>
-                      <td colSpan="6" className="px-6 py-12 text-center">
+                      <td colSpan="5" className="px-6 py-12 text-center">
                         <ShoppingCart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                         <p className="text-gray-500 font-medium">
                           No sales recorded yet
                         </p>
                         <p className="text-gray-400 text-sm mt-1">
-                          Add your first sale to start tracking revenue
+                          Sales are recorded from the Inventory page
                         </p>
                       </td>
                     </tr>
@@ -244,81 +189,6 @@ export default function SalesPage() {
           Back to Dashboard
         </Link>
       </main>
-
-      {/* Add Sale Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        title="Add New Sale"
-      >
-        <form onSubmit={handleAddSale} className="space-y-4">
-          <Input
-            label="Item Name"
-            type="text"
-            placeholder="e.g., Adobo, Sinigang"
-            value={itemName}
-            onChange={(e) => setItemName(e.target.value)}
-            required
-          />
-
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Quantity"
-              type="number"
-              placeholder="0"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              required
-              min="1"
-            />
-
-            <Input
-              label="Price (₱)"
-              type="number"
-              placeholder="0.00"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              required
-              min="0"
-              step="0.01"
-            />
-          </div>
-
-          {/* Live Total Preview */}
-          {(quantity || price) && (
-            <div className="bg-success-50 border border-success-200 rounded-lg p-4 animate-fade-in">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-success-700">
-                  Preview Total:
-                </span>
-                <span className="text-xl font-bold text-success-700">
-                  ₱{previewTotal.toLocaleString()}
-                </span>
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCloseModal}
-              fullWidth
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="success"
-              loading={submitting}
-              fullWidth
-              icon={Plus}
-            >
-              Add Sale
-            </Button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 }

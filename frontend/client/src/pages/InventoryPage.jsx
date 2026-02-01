@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   getInventoryItems,
   addInventoryItem,
+  sellInventoryItem,
 } from "../services/inventoryService";
 import API from "../api";
 import { Link } from "react-router-dom";
@@ -16,18 +17,26 @@ import {
   Package,
   AlertCircle,
   Search,
+  ShoppingCart,
 } from "lucide-react";
 
 export default function InventoryPage() {
   const [items, setItems] = useState([]);
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [price, setPrice] = useState("");
   const [expirationDate, setExpirationDate] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [deletingId, setDeletingId] = useState(null);
+
+  // Sell modal state
+  const [isSellModalOpen, setIsSellModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [sellQuantity, setSellQuantity] = useState("");
+  const [selling, setSelling] = useState(false);
 
   const LOW_STOCK_THRESHOLD = 5;
 
@@ -50,16 +59,17 @@ export default function InventoryPage() {
   const handleAddItem = async (e) => {
     e.preventDefault();
 
-    if (!name || !quantity || !expirationDate) {
+    if (!name || !quantity || !price || !expirationDate) {
       return;
     }
 
     setSubmitting(true);
 
     try {
-      await addInventoryItem({ name, quantity, expirationDate });
+      await addInventoryItem({ name, quantity, price, expirationDate });
       setName("");
       setQuantity("");
+      setPrice("");
       setExpirationDate("");
       setIsModalOpen(false);
       loadItems();
@@ -89,8 +99,46 @@ export default function InventoryPage() {
     setIsModalOpen(false);
     setName("");
     setQuantity("");
+    setPrice("");
     setExpirationDate("");
   };
+
+  const handleOpenSellModal = (item) => {
+    setSelectedItem(item);
+    setSellQuantity("");
+    setIsSellModalOpen(true);
+  };
+
+  const handleCloseSellModal = () => {
+    setIsSellModalOpen(false);
+    setSelectedItem(null);
+    setSellQuantity("");
+  };
+
+  const handleSellItem = async (e) => {
+    e.preventDefault();
+
+    if (!sellQuantity || Number(sellQuantity) <= 0) {
+      return;
+    }
+
+    setSelling(true);
+
+    try {
+      await sellInventoryItem(selectedItem._id, Number(sellQuantity));
+      handleCloseSellModal();
+      loadItems();
+    } catch (error) {
+      console.error("Sell item failed:", error);
+      alert(error.response?.data?.error || "Failed to sell item");
+    } finally {
+      setSelling(false);
+    }
+  };
+
+  const sellPreviewTotal = selectedItem
+    ? Number(sellQuantity || 0) * selectedItem.price
+    : 0;
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -171,7 +219,7 @@ export default function InventoryPage() {
         <div className="card overflow-hidden animate-fade-in">
           {loading ? (
             <div className="p-6">
-              <TableSkeleton rows={5} columns={4} />
+              <TableSkeleton rows={5} columns={5} />
             </div>
           ) : (
             <div className="overflow-x-auto custom-scrollbar">
@@ -183,6 +231,9 @@ export default function InventoryPage() {
                     </th>
                     <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
                       Quantity
+                    </th>
+                    <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                      Price
                     </th>
                     <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
                       Expiration Date
@@ -227,6 +278,9 @@ export default function InventoryPage() {
                             )}
                           </span>
                         </td>
+                        <td className="px-6 py-4 text-gray-600">
+                          ₱{item.price?.toLocaleString() || 0}
+                        </td>
                         <td className="px-6 py-4">
                           {(() => {
                             const status = getExpirationStatus(
@@ -257,15 +311,26 @@ export default function InventoryPage() {
                           })()}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <Button
-                            variant="danger"
-                            size="small"
-                            icon={Trash2}
-                            onClick={() => handleDeleteInventory(item._id)}
-                            loading={deletingId === item._id}
-                          >
-                            Delete
-                          </Button>
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              variant="success"
+                              size="small"
+                              icon={ShoppingCart}
+                              onClick={() => handleOpenSellModal(item)}
+                              disabled={item.quantity === 0}
+                            >
+                              Sell
+                            </Button>
+                            <Button
+                              variant="danger"
+                              size="small"
+                              icon={Trash2}
+                              onClick={() => handleDeleteInventory(item._id)}
+                              loading={deletingId === item._id}
+                            >
+                              Delete
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -273,7 +338,7 @@ export default function InventoryPage() {
 
                   {filteredItems.length === 0 && !loading && (
                     <tr>
-                      <td colSpan="4" className="px-6 py-12 text-center">
+                      <td colSpan="5" className="px-6 py-12 text-center">
                         <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                         <p className="text-gray-500 font-medium">
                           {searchTerm
@@ -331,6 +396,17 @@ export default function InventoryPage() {
           />
 
           <Input
+            label="Price (₱)"
+            type="number"
+            placeholder="Enter price"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            required
+            min="0"
+            step="0.01"
+          />
+
+          <Input
             label="Expiration Date"
             type="date"
             value={expirationDate}
@@ -358,6 +434,83 @@ export default function InventoryPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Sell Item Modal */}
+      <Modal
+        isOpen={isSellModalOpen}
+        onClose={handleCloseSellModal}
+        title="Sell Item"
+      >
+        {selectedItem && (
+          <form onSubmit={handleSellItem} className="space-y-4">
+            {/* Item Info */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="font-medium text-gray-900">{selectedItem.name}</p>
+              <div className="flex justify-between text-sm text-gray-600 mt-2">
+                <span>Available: {selectedItem.quantity}</span>
+                <span>Price: ₱{selectedItem.price?.toLocaleString()}</span>
+              </div>
+            </div>
+
+            <Input
+              label="Quantity to Sell"
+              type="number"
+              placeholder="Enter quantity"
+              value={sellQuantity}
+              onChange={(e) => setSellQuantity(e.target.value)}
+              required
+              min="1"
+              max={selectedItem.quantity}
+            />
+
+            {/* Live Total Preview */}
+            {sellQuantity && Number(sellQuantity) > 0 && (
+              <div className="bg-success-50 border border-success-200 rounded-lg p-4 animate-fade-in">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-success-700">
+                    Total:
+                  </span>
+                  <span className="text-xl font-bold text-success-700">
+                    ₱{sellPreviewTotal.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Validation warning */}
+            {sellQuantity && Number(sellQuantity) > selectedItem.quantity && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                Cannot sell more than available quantity
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCloseSellModal}
+                fullWidth
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="success"
+                loading={selling}
+                fullWidth
+                icon={ShoppingCart}
+                disabled={
+                  !sellQuantity ||
+                  Number(sellQuantity) <= 0 ||
+                  Number(sellQuantity) > selectedItem.quantity
+                }
+              >
+                Confirm Sale
+              </Button>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   );

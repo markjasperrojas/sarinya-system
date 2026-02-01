@@ -9,6 +9,10 @@ const inventorySchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  price: {
+    type: Number,
+    required: true,
+  },
   expirationDate: {
     type: Date,
     required: true,
