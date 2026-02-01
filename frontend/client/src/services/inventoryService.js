@@ -14,7 +14,7 @@ export const addInventoryItem = async (itemData) => {
 
 // UPDATE item
 export const updateInventoryItem = async (id, itemData) => {
-  const res = await API.put(`/inventory/update/${id}`, itemData);
+  const res = await API.put(`/inventory/${id}`, itemData);
   return res.data;
 };
 

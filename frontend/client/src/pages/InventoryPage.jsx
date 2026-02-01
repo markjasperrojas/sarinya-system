@@ -3,6 +3,7 @@ import {
   getInventoryItems,
   addInventoryItem,
   sellInventoryItem,
+  updateInventoryItem,
 } from "../services/inventoryService";
 import API from "../api";
 import { Link } from "react-router-dom";
@@ -18,6 +19,7 @@ import {
   AlertCircle,
   Search,
   ShoppingCart,
+  Pencil,
 } from "lucide-react";
 
 export default function InventoryPage() {
@@ -37,6 +39,11 @@ export default function InventoryPage() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [sellQuantity, setSellQuantity] = useState("");
   const [selling, setSelling] = useState(false);
+
+  // Edit modal state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [editing, setEditing] = useState(false);
 
   const LOW_STOCK_THRESHOLD = 5;
 
@@ -139,6 +146,52 @@ export default function InventoryPage() {
   const sellPreviewTotal = selectedItem
     ? Number(sellQuantity || 0) * selectedItem.price
     : 0;
+
+  const handleOpenEditModal = (item) => {
+    setEditItem({
+      ...item,
+      expirationDate: item.expirationDate
+        ? new Date(item.expirationDate).toISOString().split("T")[0]
+        : "",
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditItem(null);
+  };
+
+  const handleEditItem = async (e) => {
+    e.preventDefault();
+
+    if (
+      !editItem.name ||
+      !editItem.quantity ||
+      !editItem.price ||
+      !editItem.expirationDate
+    ) {
+      return;
+    }
+
+    setEditing(true);
+
+    try {
+      await updateInventoryItem(editItem._id, {
+        name: editItem.name,
+        quantity: Number(editItem.quantity),
+        price: Number(editItem.price),
+        expirationDate: editItem.expirationDate,
+      });
+      handleCloseEditModal();
+      loadItems();
+    } catch (error) {
+      console.error("Edit item failed:", error);
+      alert(error.response?.data?.error || "Failed to update item");
+    } finally {
+      setEditing(false);
+    }
+  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -320,6 +373,14 @@ export default function InventoryPage() {
                               disabled={item.quantity === 0}
                             >
                               Sell
+                            </Button>
+                            <Button
+                              variant="primary"
+                              size="small"
+                              icon={Pencil}
+                              onClick={() => handleOpenEditModal(item)}
+                            >
+                              Edit
                             </Button>
                             <Button
                               variant="danger"
@@ -507,6 +568,83 @@ export default function InventoryPage() {
                 }
               >
                 Confirm Sale
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* Edit Item Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        title="Edit Item"
+      >
+        {editItem && (
+          <form onSubmit={handleEditItem} className="space-y-4">
+            <Input
+              label="Item Name"
+              type="text"
+              placeholder="e.g., Rice, Cooking Oil"
+              value={editItem.name}
+              onChange={(e) =>
+                setEditItem({ ...editItem, name: e.target.value })
+              }
+              required
+            />
+
+            <Input
+              label="Quantity"
+              type="number"
+              placeholder="Enter quantity"
+              value={editItem.quantity}
+              onChange={(e) =>
+                setEditItem({ ...editItem, quantity: e.target.value })
+              }
+              required
+              min="0"
+            />
+
+            <Input
+              label="Price (₱)"
+              type="number"
+              placeholder="Enter price"
+              value={editItem.price}
+              onChange={(e) =>
+                setEditItem({ ...editItem, price: e.target.value })
+              }
+              required
+              min="0"
+              step="0.01"
+            />
+
+            <Input
+              label="Expiration Date"
+              type="date"
+              value={editItem.expirationDate}
+              onChange={(e) =>
+                setEditItem({ ...editItem, expirationDate: e.target.value })
+              }
+              required
+            />
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCloseEditModal}
+                fullWidth
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                loading={editing}
+                fullWidth
+                icon={Pencil}
+              >
+                Save Changes
               </Button>
             </div>
           </form>
