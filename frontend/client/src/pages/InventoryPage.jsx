@@ -22,7 +22,7 @@ export default function InventoryPage() {
   const [items, setItems] = useState([]);
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [unit, setUnit] = useState("");
+  const [expirationDate, setExpirationDate] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -50,17 +50,17 @@ export default function InventoryPage() {
   const handleAddItem = async (e) => {
     e.preventDefault();
 
-    if (!name || !quantity || !unit) {
+    if (!name || !quantity || !expirationDate) {
       return;
     }
 
     setSubmitting(true);
 
     try {
-      await addInventoryItem({ name, quantity, unit });
+      await addInventoryItem({ name, quantity, expirationDate });
       setName("");
       setQuantity("");
-      setUnit("");
+      setExpirationDate("");
       setIsModalOpen(false);
       loadItems();
     } catch (error) {
@@ -89,11 +89,36 @@ export default function InventoryPage() {
     setIsModalOpen(false);
     setName("");
     setQuantity("");
-    setUnit("");
+    setExpirationDate("");
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const getExpirationStatus = (dateString) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expirationDate = new Date(dateString);
+    expirationDate.setHours(0, 0, 0, 0);
+    const diffTime = expirationDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return "expired";
+    } else if (diffDays <= 7) {
+      return "warning";
+    }
+    return "normal";
   };
 
   const filteredItems = items.filter((item) =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+    item.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
@@ -160,7 +185,7 @@ export default function InventoryPage() {
                       Quantity
                     </th>
                     <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                      Unit
+                      Expiration Date
                     </th>
                     <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
                       Actions
@@ -202,7 +227,35 @@ export default function InventoryPage() {
                             )}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-gray-600">{item.unit}</td>
+                        <td className="px-6 py-4">
+                          {(() => {
+                            const status = getExpirationStatus(
+                              item.expirationDate,
+                            );
+                            const statusStyles = {
+                              expired: "bg-red-100 text-red-800",
+                              warning: "bg-yellow-100 text-yellow-800",
+                              normal: "bg-green-100 text-green-800",
+                            };
+                            const statusLabels = {
+                              expired: "Expired",
+                              warning: "Expiring Soon",
+                              normal: "",
+                            };
+                            return (
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${statusStyles[status]}`}
+                              >
+                                {formatDate(item.expirationDate)}
+                                {statusLabels[status] && (
+                                  <span className="ml-1 text-xs">
+                                    ({statusLabels[status]})
+                                  </span>
+                                )}
+                              </span>
+                            );
+                          })()}
+                        </td>
                         <td className="px-6 py-4 text-center">
                           <Button
                             variant="danger"
@@ -278,11 +331,10 @@ export default function InventoryPage() {
           />
 
           <Input
-            label="Unit"
-            type="text"
-            placeholder="e.g., kg, pcs, liters"
-            value={unit}
-            onChange={(e) => setUnit(e.target.value)}
+            label="Expiration Date"
+            type="date"
+            value={expirationDate}
+            onChange={(e) => setExpirationDate(e.target.value)}
             required
           />
 

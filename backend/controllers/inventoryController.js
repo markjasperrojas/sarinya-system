@@ -3,9 +3,9 @@ const Inventory = require("../models/Inventory");
 // CREATE
 exports.addItem = async (req, res) => {
   try {
-    const { name, quantity, unit } = req.body;
+    const { name, quantity, expirationDate } = req.body;
 
-    const item = new Inventory({ name, quantity, unit });
+    const item = new Inventory({ name, quantity, expirationDate });
     await item.save();
 
     res.json({ message: "Item added!", item });
@@ -28,11 +28,11 @@ exports.getItems = async (req, res) => {
 exports.updateItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, quantity, unit } = req.body;
+    const { name, quantity, expirationDate } = req.body;
 
     const updatedItem = await Inventory.findByIdAndUpdate(
       id,
-      { name, quantity, unit, updatedAt: Date.now() },
+      { name, quantity, expirationDate, updatedAt: Date.now() },
       { new: true }
     );
 

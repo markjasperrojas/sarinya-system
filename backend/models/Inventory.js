@@ -9,8 +9,8 @@ const inventorySchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
-  unit: {
-    type: String,
+  expirationDate: {
+    type: Date,
     required: true,
   },
   updatedAt: {
