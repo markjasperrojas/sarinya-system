@@ -1,16 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import { setAuthToken } from "../api";
+import { LogOut } from "lucide-react";
+import Button from "./Button";
 
 export default function LogoutButton() {
   const navigate = useNavigate();
 
   const handleLogout = () => {
     try {
-      // remove token
       localStorage.removeItem("sarinya_token");
-      // remove axios header
       setAuthToken(null);
-      // go to login
       navigate("/");
     } catch (err) {
       console.error("Logout error:", err);
@@ -19,12 +18,14 @@ export default function LogoutButton() {
   };
 
   return (
-    <button
+    <Button
+      variant="danger"
+      size="small"
+      icon={LogOut}
       onClick={handleLogout}
-      className="px-5 py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700"
       title="Logout"
     >
-      Logout
-    </button>
+      <span className="hidden sm:inline">Logout</span>
+    </Button>
   );
 }

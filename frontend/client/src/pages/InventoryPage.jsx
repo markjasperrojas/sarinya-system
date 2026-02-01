@@ -6,25 +6,44 @@ import {
 import API from "../api";
 import { Link } from "react-router-dom";
 import Modal from "../components/Modal";
+import Button from "../components/Button";
+import Input from "../components/Input";
+import TableSkeleton from "../components/TableSkeleton";
+import {
+  Plus,
+  Trash2,
+  ArrowLeft,
+  Package,
+  AlertCircle,
+  Search,
+} from "lucide-react";
 
 export default function InventoryPage() {
   const [items, setItems] = useState([]);
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
+
+  const LOW_STOCK_THRESHOLD = 5;
 
   useEffect(() => {
     loadItems();
   }, []);
 
   const loadItems = async () => {
+    setLoading(true);
     try {
       const data = await getInventoryItems();
       setItems(data);
     } catch (error) {
       console.error("Failed to load inventory:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -32,11 +51,10 @@ export default function InventoryPage() {
     e.preventDefault();
 
     if (!name || !quantity || !unit) {
-      alert("Please fill all fields!");
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
 
     try {
       await addInventoryItem({ name, quantity, unit });
@@ -48,19 +66,22 @@ export default function InventoryPage() {
     } catch (error) {
       console.error("Add item failed:", error);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
   const handleDeleteInventory = async (id) => {
-    if (!window.confirm("Delete this item?")) return;
+    if (!window.confirm("Are you sure you want to delete this item?")) return;
 
+    setDeletingId(id);
     try {
       await API.delete(`/inventory/${id}`);
       loadItems();
     } catch (error) {
       console.log("Delete inventory failed:", error);
       alert("Failed to delete item");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -71,103 +92,219 @@ export default function InventoryPage() {
     setUnit("");
   };
 
+  const filteredItems = items.filter((item) =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="p-4 sm:p-8 text-base">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-10">
-        <h1 className="text-2xl sm:text-4xl font-bold">Inventory Management</h1>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-green-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold hover:bg-green-700 w-full sm:w-auto"
-        >
-          + Add New Item
-        </button>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center">
+                <Package className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Inventory</h1>
+                <p className="text-xs text-gray-500 hidden sm:block">
+                  {items.length} items total
+                </p>
+              </div>
+            </div>
 
-      {/* Inventory List */}
-      <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-md">
-        <h2 className="text-xl sm:text-2xl font-semibold mb-4">Inventory List</h2>
-
-        <div className="max-h-[500px] overflow-auto border rounded-lg">
-          <table className="w-full text-left text-sm sm:text-base min-w-[400px]">
-            <thead className="bg-gray-100 sticky top-0">
-              <tr>
-                <th className="p-2 sm:p-3 border text-base sm:text-lg">Item</th>
-                <th className="p-2 sm:p-3 border text-base sm:text-lg">Qty</th>
-                <th className="p-2 sm:p-3 border text-base sm:text-lg">Unit</th>
-                <th className="p-2 sm:p-3 border text-base sm:text-lg">Action</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {items.map((item) => (
-                <tr key={item._id} className="odd:bg-white even:bg-gray-50">
-                  <td className="p-2 sm:p-3 border">{item.name}</td>
-                  <td className="p-2 sm:p-3 border">{item.quantity}</td>
-                  <td className="p-2 sm:p-3 border">{item.unit}</td>
-                  <td className="p-2 sm:p-3 border text-center">
-                    <button
-                      onClick={() => handleDeleteInventory(item._id)}
-                      className="px-2 sm:px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-
-              {items.length === 0 && (
-                <tr>
-                  <td colSpan="4" className="text-center p-4 text-gray-500">
-                    No items yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+            <Button
+              variant="success"
+              icon={Plus}
+              onClick={() => setIsModalOpen(true)}
+            >
+              <span className="hidden sm:inline">Add Item</span>
+              <span className="sm:hidden">Add</span>
+            </Button>
+          </div>
         </div>
-      </div>
+      </header>
 
-      <Link
-        to="/dashboard"
-        className="block mt-6 text-blue-600 hover:underline"
-      >
-        ← Back to Dashboard
-      </Link>
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search inventory..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all"
+            />
+          </div>
+        </div>
+
+        {/* Inventory Table Card */}
+        <div className="card overflow-hidden animate-fade-in">
+          {loading ? (
+            <div className="p-6">
+              <TableSkeleton rows={5} columns={4} />
+            </div>
+          ) : (
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                      Item Name
+                    </th>
+                    <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                      Quantity
+                    </th>
+                    <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                      Unit
+                    </th>
+                    <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredItems.map((item) => {
+                    const isLowStock =
+                      Number(item.quantity) <= LOW_STOCK_THRESHOLD;
+                    return (
+                      <tr
+                        key={item._id}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-2 h-2 rounded-full ${
+                                isLowStock ? "bg-warning-500" : "bg-success-500"
+                              }`}
+                            ></div>
+                            <span className="font-medium text-gray-900">
+                              {item.name}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
+                              isLowStock
+                                ? "bg-warning-100 text-warning-800"
+                                : "bg-success-100 text-success-800"
+                            }`}
+                          >
+                            {item.quantity}
+                            {isLowStock && (
+                              <AlertCircle className="w-3 h-3 ml-1" />
+                            )}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-gray-600">{item.unit}</td>
+                        <td className="px-6 py-4 text-center">
+                          <Button
+                            variant="danger"
+                            size="small"
+                            icon={Trash2}
+                            onClick={() => handleDeleteInventory(item._id)}
+                            loading={deletingId === item._id}
+                          >
+                            Delete
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {filteredItems.length === 0 && !loading && (
+                    <tr>
+                      <td colSpan="4" className="px-6 py-12 text-center">
+                        <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500 font-medium">
+                          {searchTerm
+                            ? "No items match your search"
+                            : "No inventory items yet"}
+                        </p>
+                        <p className="text-gray-400 text-sm mt-1">
+                          {searchTerm
+                            ? "Try a different search term"
+                            : "Add your first item to get started"}
+                        </p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Back Link */}
+        <Link
+          to="/dashboard"
+          className="inline-flex items-center gap-2 mt-6 text-primary-600 hover:text-primary-700 font-medium transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Dashboard
+        </Link>
+      </main>
 
       {/* Add Item Modal */}
-      <Modal isOpen={isModalOpen} onClose={handleCloseModal} title="Add New Item">
-        <form onSubmit={handleAddItem}>
-          <input
+      <Modal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        title="Add New Item"
+      >
+        <form onSubmit={handleAddItem} className="space-y-4">
+          <Input
+            label="Item Name"
             type="text"
-            placeholder="Item Name"
-            className="w-full p-3 border rounded-lg mb-3 text-base"
+            placeholder="e.g., Rice, Cooking Oil"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            required
           />
 
-          <input
+          <Input
+            label="Quantity"
             type="number"
-            placeholder="Quantity"
-            className="w-full p-3 border rounded-lg mb-3 text-base"
+            placeholder="Enter quantity"
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
+            required
+            min="0"
           />
 
-          <input
+          <Input
+            label="Unit"
             type="text"
-            placeholder="Unit (kg, pcs, etc.)"
-            className="w-full p-3 border rounded-lg mb-4 text-base"
+            placeholder="e.g., kg, pcs, liters"
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
+            required
           />
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-green-600 text-white p-3 rounded-lg font-semibold hover:bg-green-700 text-base"
-          >
-            {loading ? "Adding..." : "Add Item"}
-          </button>
+          <div className="flex gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCloseModal}
+              fullWidth
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="success"
+              loading={submitting}
+              fullWidth
+              icon={Plus}
+            >
+              Add Item
+            </Button>
+          </div>
         </form>
       </Modal>
     </div>

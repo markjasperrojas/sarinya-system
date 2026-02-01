@@ -1,8 +1,19 @@
-// src/pages/DashboardPage.jsx
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../api";
 import LogoutButton from "../components/LogoutButton";
+import StatsCard from "../components/StatsCard";
+import LoadingSpinner from "../components/LoadingSpinner";
+import Button from "../components/Button";
+import {
+  Package,
+  AlertTriangle,
+  ShoppingCart,
+  DollarSign,
+  ArrowRight,
+  RefreshCw,
+  LayoutDashboard,
+} from "lucide-react";
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -10,6 +21,7 @@ export default function DashboardPage() {
   const [lowStockCount, setLowStockCount] = useState(0);
   const [salesCount, setSalesCount] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
 
   const LOW_STOCK_THRESHOLD = 5;
@@ -23,8 +35,13 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (isRefresh = false) => {
+    if (isRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
     try {
       const [invRes, salesRes] = await Promise.all([
         API.get("/inventory"),
@@ -54,79 +71,106 @@ export default function DashboardPage() {
       console.error("Dashboard fetch error:", err);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="text-gray-500 text-lg">Loading dashboard...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <LoadingSpinner size="large" text="Loading dashboard..." />
       </div>
     );
   }
 
   return (
-    <div className="p-10 text-base">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="flex items-center justify-between mb-10">
-        <h1 className="text-4xl font-bold">Dashboard</h1>
-        <LogoutButton />
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <div className="bg-white p-6 rounded-2xl shadow-md">
-          <div className="text-gray-500 text-sm">Total Inventory Items</div>
-          <div className="text-3xl font-bold mt-2">{inventoryCount}</div>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl shadow-md">
-          <div className="text-gray-500 text-sm">
-            Low Stock Items (≤ {LOW_STOCK_THRESHOLD})
-          </div>
-          <div className="text-3xl font-bold mt-2">{lowStockCount}</div>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl shadow-md">
-          <div className="text-gray-500 text-sm">Total Sales</div>
-          <div className="text-3xl font-bold mt-2">{salesCount}</div>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl shadow-md">
-          <div className="text-gray-500 text-sm">Total Revenue</div>
-          <div className="text-3xl font-bold mt-2">
-            ₱{totalRevenue.toLocaleString()}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center">
+                <LayoutDashboard className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
+                <p className="text-xs text-gray-500 hidden sm:block">
+                  Sarinya Restaurant
+                </p>
+              </div>
+            </div>
+            <LogoutButton />
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Quick Actions */}
-      <div className="bg-white p-6 rounded-2xl shadow-md">
-        <h2 className="text-2xl font-semibold mb-4">Quick Actions</h2>
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 animate-fade-in">
+          <StatsCard
+            title="Total Inventory Items"
+            value={inventoryCount}
+            icon={Package}
+            colorScheme="primary"
+          />
 
-        <div className="flex flex-wrap gap-3">
-          <Link
-            to="/inventory"
-            className="px-5 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
-          >
-            View Inventory
-          </Link>
+          <StatsCard
+            title={`Low Stock (≤ ${LOW_STOCK_THRESHOLD})`}
+            value={lowStockCount}
+            icon={AlertTriangle}
+            colorScheme={lowStockCount > 0 ? "warning" : "success"}
+          />
 
-          <Link
-            to="/sales"
-            className="px-5 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700"
-          >
-            View Sales
-          </Link>
+          <StatsCard
+            title="Total Sales"
+            value={salesCount}
+            icon={ShoppingCart}
+            colorScheme="success"
+          />
 
-          <button
-            onClick={fetchData}
-            className="px-5 py-3 border border-gray-300 rounded-lg hover:bg-gray-100"
-          >
-            Refresh
-          </button>
+          <StatsCard
+            title="Total Revenue"
+            value={totalRevenue}
+            icon={DollarSign}
+            colorScheme="success"
+            prefix="₱"
+          />
         </div>
-      </div>
+
+        {/* Quick Actions */}
+        <div className="card p-6 animate-slide-up">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Quick Actions
+          </h2>
+
+          <div className="flex flex-wrap gap-3">
+            <Link to="/inventory">
+              <Button icon={Package}>
+                View Inventory
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </Link>
+
+            <Link to="/sales">
+              <Button variant="success" icon={ShoppingCart}>
+                View Sales
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </Link>
+
+            <Button
+              variant="outline"
+              icon={RefreshCw}
+              onClick={() => fetchData(true)}
+              loading={isRefreshing}
+            >
+              {isRefreshing ? "Refreshing..." : "Refresh Data"}
+            </Button>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

@@ -1,6 +1,36 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { X } from "lucide-react";
 
-export default function Modal({ isOpen, onClose, title, children }) {
+export default function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  size = "default",
+}) {
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
+
+  const sizes = {
+    small: "max-w-sm",
+    default: "max-w-md",
+    large: "max-w-lg",
+    xl: "max-w-xl",
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      requestAnimationFrame(() => {
+        setIsAnimating(true);
+      });
+    } else {
+      setIsAnimating(false);
+      const timer = setTimeout(() => setShouldRender(false), 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === "Escape") {
@@ -19,7 +49,7 @@ export default function Modal({ isOpen, onClose, title, children }) {
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!shouldRender) return null;
 
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {
@@ -29,20 +59,38 @@ export default function Modal({ isOpen, onClose, title, children }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 transition-opacity"
+      className={`
+        fixed inset-0 z-50 flex items-center justify-center p-4
+        transition-all duration-200 ease-out
+        ${isAnimating ? "bg-black/50" : "bg-black/0"}
+      `}
       onClick={handleBackdropClick}
     >
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
-          <h2 className="text-lg sm:text-xl font-semibold">{title}</h2>
+      <div
+        className={`
+          bg-white rounded-2xl shadow-2xl w-full ${sizes[size]}
+          max-h-[90vh] overflow-hidden
+          transition-all duration-200 ease-out
+          ${
+            isAnimating
+              ? "opacity-100 scale-100 translate-y-0"
+              : "opacity-0 scale-95 translate-y-4"
+          }
+        `}
+      >
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+          <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl leading-none p-1"
+            className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
           >
-            &times;
+            <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-4 sm:p-6">{children}</div>
+
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)] custom-scrollbar">
+          {children}
+        </div>
       </div>
     </div>
   );

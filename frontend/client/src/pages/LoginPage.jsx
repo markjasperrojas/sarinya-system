@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { login } from "../services/authService";
+import { User, Lock, AlertCircle, ChefHat } from "lucide-react";
+import Input from "../components/Input";
+import Button from "../components/Button";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -22,7 +25,7 @@ export default function LoginPage() {
       const msg =
         err.response?.data?.error ||
         err.response?.data?.message ||
-        "Login failed";
+        "Login failed. Please check your credentials.";
       setError(msg);
     } finally {
       setLoading(false);
@@ -30,52 +33,73 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 p-4">
-      <div className="bg-white w-full max-w-sm p-8 rounded-2xl shadow-xl border border-gray-100">
-        <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
-          Sarinya Restaurant
-        </h1>
-        <h2 className="text-lg font-semibold text-center mb-6 text-gray-600">
-          Inventory & Sales System Login
-        </h2>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-success-50 p-4">
+      {/* Decorative background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary-100 rounded-full opacity-50 blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-success-100 rounded-full opacity-50 blur-3xl"></div>
+      </div>
 
+      <div className="relative bg-white w-full max-w-md p-8 rounded-3xl shadow-soft border border-gray-100 animate-fade-in">
+        {/* Logo/Brand */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+            <ChefHat className="w-9 h-9 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Sarinya Restaurant</h1>
+          <p className="text-gray-500 mt-1">Inventory & Sales System</p>
+        </div>
+
+        {/* Error Alert */}
         {error && (
-          <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm">
-            {error}
+          <div className="flex items-center gap-3 bg-danger-50 text-danger-700 p-4 rounded-xl mb-6 animate-slide-down">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <p className="text-sm">{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <Input
+            label="Username"
+            type="text"
+            placeholder="Enter your username"
+            icon={User}
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            type="text"
-            placeholder="Username"
-            className="w-full p-3 border rounded-lg text-base focus:ring-2 focus:ring-blue-400 focus:outline-none"
             required
+            autoComplete="username"
           />
 
-          <input
+          <Input
+            label="Password"
+            type="password"
+            placeholder="Enter your password"
+            icon={Lock}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            placeholder="Password"
-            className="w-full p-3 border rounded-lg text-base focus:ring-2 focus:ring-blue-400 focus:outline-none"
             required
+            autoComplete="current-password"
           />
 
-          <button
+          <Button
             type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 transition text-white p-3 rounded-lg font-semibold text-base"
+            loading={loading}
+            fullWidth
+            size="large"
+            className="mt-6"
           >
-            {loading ? "Logging in..." : "Login"}
-          </button>
+            Sign In
+          </Button>
         </form>
 
-        <p className="mt-6 text-center text-gray-500 text-sm">
-          Secure access required
-        </p>
+        {/* Footer */}
+        <div className="mt-8 pt-6 border-t border-gray-100">
+          <p className="text-center text-gray-400 text-sm flex items-center justify-center gap-2">
+            <Lock className="w-4 h-4" />
+            Secure access required
+          </p>
+        </div>
       </div>
     </div>
   );
