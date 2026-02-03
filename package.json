@@ -1,0 +1,13 @@
+{
+  "name": "sarinya-system",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd backend && node server.js",
+    "client": "cd frontend/client && npm start",
+    "dev": "concurrently \"npm run server\" \"npm run client\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
