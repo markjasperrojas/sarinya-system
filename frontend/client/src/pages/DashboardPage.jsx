@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../api";
+import { useAuth } from "../contexts/AuthContext";
 import LogoutButton from "../components/LogoutButton";
 import StatsCard from "../components/StatsCard";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -13,6 +14,7 @@ import {
   ArrowRight,
   RefreshCw,
   LayoutDashboard,
+  Shield,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -23,17 +25,17 @@ export default function DashboardPage() {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
+  const { user, isAdmin, hasPermission } = useAuth();
 
   const LOW_STOCK_THRESHOLD = 5;
 
   useEffect(() => {
-    const token = localStorage.getItem("sarinya_token");
-    if (!token) {
+    if (!user) {
       navigate("/");
       return;
     }
     fetchData();
-  }, []);
+  }, [user, navigate]);
 
   const fetchData = async (isRefresh = false) => {
     if (isRefresh) {
@@ -146,19 +148,32 @@ export default function DashboardPage() {
           </h2>
 
           <div className="flex flex-wrap gap-3">
-            <Link to="/inventory">
-              <Button icon={Package}>
-                View Inventory
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
-            </Link>
+            {isAdmin() && (
+              <Link to="/admin">
+                <Button variant="warning" icon={Shield}>
+                  Admin Dashboard
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+            )}
 
-            <Link to="/sales">
-              <Button variant="success" icon={ShoppingCart}>
-                View Sales
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
-            </Link>
+            {hasPermission("inventory", "view") && (
+              <Link to="/inventory">
+                <Button icon={Package}>
+                  View Inventory
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+            )}
+
+            {hasPermission("sales", "view") && (
+              <Link to="/sales">
+                <Button variant="success" icon={ShoppingCart}>
+                  View Sales
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+            )}
 
             <Button
               variant="outline"

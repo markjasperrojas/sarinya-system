@@ -1,0 +1,168 @@
+const User = require("../models/User");
+const bcrypt = require("bcryptjs");
+
+// Get all users
+exports.getUsers = async (req, res) => {
+  try {
+    const users = await User.find().select("-password").sort({ createdAt: -1 });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+};
+
+// Get single user by ID
+exports.getUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch user" });
+  }
+};
+
+// Get current user profile
+exports.getProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch profile" });
+  }
+};
+
+// Create new user
+exports.createUser = async (req, res) => {
+  try {
+    const { username, password, role, permissions, isActive } = req.body;
+
+    // Check if username already exists
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      return res.status(400).json({ error: "Username already exists" });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user with provided or default values
+    const newUser = new User({
+      username,
+      password: hashedPassword,
+      role: role || "staff",
+      permissions: permissions || undefined,
+      isActive: isActive !== undefined ? isActive : true,
+    });
+
+    // If role is admin, grant all permissions
+    if (role === "admin") {
+      newUser.permissions = {
+        inventory: { view: true, add: true, edit: true, delete: true },
+        sales: { view: true, add: true, edit: true, delete: true },
+        users: { view: true, add: true, edit: true, delete: true },
+      };
+    }
+
+    await newUser.save();
+
+    // Return user without password
+    const userResponse = newUser.toObject();
+    delete userResponse.password;
+
+    res.status(201).json(userResponse);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to create user" });
+  }
+};
+
+// Update user
+exports.updateUser = async (req, res) => {
+  try {
+    const { username, password, role, permissions, isActive } = req.body;
+
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Check if username is being changed and if it's already taken
+    if (username && username !== user.username) {
+      const existingUser = await User.findOne({ username });
+      if (existingUser) {
+        return res.status(400).json({ error: "Username already exists" });
+      }
+      user.username = username;
+    }
+
+    // Update password if provided
+    if (password) {
+      user.password = await bcrypt.hash(password, 10);
+    }
+
+    // Update role if provided
+    if (role) {
+      user.role = role;
+      // If changing to admin, grant all permissions
+      if (role === "admin") {
+        user.permissions = {
+          inventory: { view: true, add: true, edit: true, delete: true },
+          sales: { view: true, add: true, edit: true, delete: true },
+          users: { view: true, add: true, edit: true, delete: true },
+        };
+      }
+    }
+
+    // Update permissions if provided and not admin
+    if (permissions && user.role !== "admin") {
+      user.permissions = permissions;
+    }
+
+    // Update isActive if provided
+    if (isActive !== undefined) {
+      user.isActive = isActive;
+    }
+
+    await user.save();
+
+    // Return user without password
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    res.json(userResponse);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update user" });
+  }
+};
+
+// Delete user
+exports.deleteUser = async (req, res) => {
+  try {
+    // Prevent self-deletion
+    if (req.params.id === req.user.id.toString()) {
+      return res.status(400).json({ error: "Cannot delete your own account" });
+    }
+
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    await User.findByIdAndDelete(req.params.id);
+
+    res.json({ message: "User deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete user" });
+  }
+};

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import API from "../api";
 import { Link } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import Button from "../components/Button";
 import TableSkeleton from "../components/TableSkeleton";
 import {
@@ -20,6 +21,7 @@ export default function SalesPage() {
   const [search, setSearch] = useState("");
   const [timeRange, setTimeRange] = useState("all");
   const [selectedDate, setSelectedDate] = useState("");
+  const { hasPermission } = useAuth();
 
   const loadSales = async () => {
     setLoading(true);
@@ -218,15 +220,17 @@ export default function SalesPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <Button
-                          variant="danger"
-                          size="small"
-                          icon={Trash2}
-                          onClick={() => handleDeleteSale(sale._id)}
-                          loading={deletingId === sale._id}
-                        >
-                          Delete
-                        </Button>
+                        {hasPermission("sales", "delete") && (
+                          <Button
+                            variant="danger"
+                            size="small"
+                            icon={Trash2}
+                            onClick={() => handleDeleteSale(sale._id)}
+                            loading={deletingId === sale._id}
+                          >
+                            Delete
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   ))}

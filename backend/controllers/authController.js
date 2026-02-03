@@ -31,6 +31,11 @@ exports.login = async (req, res) => {
 
     if (!user) return res.status(400).json({ error: "User not found" });
 
+    // Check if user is active
+    if (!user.isActive) {
+      return res.status(403).json({ error: "Account is deactivated" });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) return res.status(400).json({ error: "Wrong password" });
@@ -42,6 +47,13 @@ exports.login = async (req, res) => {
     res.json({
       message: "Login successful!",
       token,
+      user: {
+        id: user._id,
+        username: user.username,
+        role: user.role,
+        permissions: user.permissions,
+        isActive: user.isActive,
+      },
     });
   } catch (error) {
     res.status(500).json({ error: "Login failed" });

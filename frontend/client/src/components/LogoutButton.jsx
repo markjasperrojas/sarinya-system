@@ -1,15 +1,15 @@
 import { useNavigate } from "react-router-dom";
-import { setAuthToken } from "../api";
+import { useAuth } from "../contexts/AuthContext";
 import { LogOut } from "lucide-react";
 import Button from "./Button";
 
 export default function LogoutButton() {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const handleLogout = () => {
     try {
-      localStorage.removeItem("sarinya_token");
-      setAuthToken(null);
+      logout();
       navigate("/");
     } catch (err) {
       console.error("Logout error:", err);

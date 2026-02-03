@@ -7,6 +7,7 @@ import {
 } from "../services/inventoryService";
 import API from "../api";
 import { Link } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import Modal from "../components/Modal";
 import Button from "../components/Button";
 import Input from "../components/Input";
@@ -44,6 +45,8 @@ export default function InventoryPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [editing, setEditing] = useState(false);
+
+  const { hasPermission } = useAuth();
 
   const LOW_STOCK_THRESHOLD = 5;
 
@@ -240,14 +243,16 @@ export default function InventoryPage() {
               </div>
             </div>
 
-            <Button
-              variant="success"
-              icon={Plus}
-              onClick={() => setIsModalOpen(true)}
-            >
-              <span className="hidden sm:inline">Add Item</span>
-              <span className="sm:hidden">Add</span>
-            </Button>
+            {hasPermission("inventory", "add") && (
+              <Button
+                variant="success"
+                icon={Plus}
+                onClick={() => setIsModalOpen(true)}
+              >
+                <span className="hidden sm:inline">Add Item</span>
+                <span className="sm:hidden">Add</span>
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -365,32 +370,38 @@ export default function InventoryPage() {
                         </td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex items-center justify-center gap-2">
-                            <Button
-                              variant="success"
-                              size="small"
-                              icon={ShoppingCart}
-                              onClick={() => handleOpenSellModal(item)}
-                              disabled={item.quantity === 0}
-                            >
-                              Sell
-                            </Button>
-                            <Button
-                              variant="primary"
-                              size="small"
-                              icon={Pencil}
-                              onClick={() => handleOpenEditModal(item)}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              variant="danger"
-                              size="small"
-                              icon={Trash2}
-                              onClick={() => handleDeleteInventory(item._id)}
-                              loading={deletingId === item._id}
-                            >
-                              Delete
-                            </Button>
+                            {hasPermission("sales", "add") && (
+                              <Button
+                                variant="success"
+                                size="small"
+                                icon={ShoppingCart}
+                                onClick={() => handleOpenSellModal(item)}
+                                disabled={item.quantity === 0}
+                              >
+                                Sell
+                              </Button>
+                            )}
+                            {hasPermission("inventory", "edit") && (
+                              <Button
+                                variant="primary"
+                                size="small"
+                                icon={Pencil}
+                                onClick={() => handleOpenEditModal(item)}
+                              >
+                                Edit
+                              </Button>
+                            )}
+                            {hasPermission("inventory", "delete") && (
+                              <Button
+                                variant="danger"
+                                size="small"
+                                icon={Trash2}
+                                onClick={() => handleDeleteInventory(item._id)}
+                                loading={deletingId === item._id}
+                              >
+                                Delete
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>
