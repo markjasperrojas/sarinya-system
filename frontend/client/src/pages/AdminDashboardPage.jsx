@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getUsers } from "../services/userService";
-import LogoutButton from "../components/LogoutButton";
 import StatsCard from "../components/StatsCard";
 import LoadingSpinner from "../components/LoadingSpinner";
 import Button from "../components/Button";
@@ -12,7 +11,6 @@ import {
   UserCheck,
   LayoutDashboard,
   ArrowRight,
-  Settings,
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
@@ -52,14 +50,14 @@ export default function AdminDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner size="large" text="Loading admin dashboard..." />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -77,13 +75,12 @@ export default function AdminDashboardPage() {
                 </p>
               </div>
             </div>
-            <LogoutButton />
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 animate-fade-in">
           <StatsCard
@@ -135,6 +132,6 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       </main>
-    </div>
+    </>
   );
 }

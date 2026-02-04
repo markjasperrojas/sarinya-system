@@ -182,7 +182,7 @@ export default function UserManagementPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -214,7 +214,7 @@ export default function UserManagementPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-8">
         {/* Search Bar */}
         <div className="mb-6">
           <div className="relative max-w-md">
@@ -618,6 +618,6 @@ export default function UserManagementPage() {
           </form>
         )}
       </Modal>
-    </div>
+    </>
   );
 }

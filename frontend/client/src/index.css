@@ -81,3 +81,8 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   @apply bg-gray-400;
 }
+
+/* Safe area for iOS home indicator */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}

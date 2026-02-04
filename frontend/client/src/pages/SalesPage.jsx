@@ -72,7 +72,7 @@ export default function SalesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -94,7 +94,7 @@ export default function SalesPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-8">
         {/* Revenue Summary Card */}
         <div className="card p-6 mb-6 bg-gradient-to-r from-success-500 to-success-600 text-white animate-fade-in">
           <div className="flex items-center justify-between">
@@ -263,6 +263,6 @@ export default function SalesPage() {
           Back to Dashboard
         </Link>
       </main>
-    </div>
+    </>
   );
 }
