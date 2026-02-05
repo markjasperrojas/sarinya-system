@@ -8,6 +8,7 @@ import InventoryPage from "./pages/InventoryPage";
 import SalesPage from "./pages/SalesPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import UserManagementPage from "./pages/UserManagementPage";
+import ActivityLogsPage from "./pages/ActivityLogsPage";
 
 function App() {
   return (
@@ -65,6 +66,16 @@ function App() {
               <ProtectedRoute requiredRole="admin">
                 <Layout>
                   <UserManagementPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/activity-logs"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <Layout>
+                  <ActivityLogsPage />
                 </Layout>
               </ProtectedRoute>
             }

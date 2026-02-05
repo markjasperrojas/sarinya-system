@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { setAuthToken } from "../api";
+import API, { setAuthToken } from "../api";
 
 const AuthContext = createContext(null);
 
@@ -34,7 +34,12 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await API.post("/auth/logout");
+    } catch (e) {
+      // Silent fail — logout should always work client-side
+    }
     localStorage.removeItem("sarinya_token");
     localStorage.removeItem("sarinya_user");
     setAuthToken(null);

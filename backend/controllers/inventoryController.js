@@ -1,5 +1,6 @@
 const Inventory = require("../models/Inventory");
 const Sale = require("../models/Sale");
+const logActivity = require("../utils/activityLogger");
 
 // CREATE
 exports.addItem = async (req, res) => {
@@ -8,6 +9,15 @@ exports.addItem = async (req, res) => {
 
     const item = new Inventory({ name, quantity, price, expirationDate });
     await item.save();
+
+    logActivity({
+      userId: req.user.id,
+      username: req.user.username,
+      action: "add",
+      module: "inventory",
+      description: `Added inventory item '${name}'`,
+      targetId: item._id,
+    });
 
     res.json({ message: "Item added!", item });
   } catch (error) {
@@ -37,6 +47,15 @@ exports.updateItem = async (req, res) => {
       { new: true }
     );
 
+    logActivity({
+      userId: req.user.id,
+      username: req.user.username,
+      action: "edit",
+      module: "inventory",
+      description: `Updated inventory item '${updatedItem.name}'`,
+      targetId: updatedItem._id,
+    });
+
     res.json({ message: "Item updated!", updatedItem });
   } catch (error) {
     res.status(500).json({ error: "Update failed" });
@@ -48,7 +67,21 @@ exports.deleteItem = async (req, res) => {
   try {
     const { id } = req.params;
 
+    const item = await Inventory.findById(id);
+    if (!item) {
+      return res.status(404).json({ error: "Item not found" });
+    }
+
     await Inventory.findByIdAndDelete(id);
+
+    logActivity({
+      userId: req.user.id,
+      username: req.user.username,
+      action: "delete",
+      module: "inventory",
+      description: `Deleted inventory item '${item.name}'`,
+      targetId: item._id,
+    });
 
     res.json({ message: "Item deleted!" });
   } catch (error) {
@@ -89,6 +122,15 @@ exports.sellItem = async (req, res) => {
     item.quantity -= quantity;
     item.updatedAt = Date.now();
     await item.save();
+
+    logActivity({
+      userId: req.user.id,
+      username: req.user.username,
+      action: "sell",
+      module: "inventory",
+      description: `Sold ${quantity} of '${item.name}' for ₱${sale.total}`,
+      targetId: item._id,
+    });
 
     res.json({ message: "Sale completed!", sale, updatedItem: item });
   } catch (error) {

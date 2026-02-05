@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
+const logActivity = require("../utils/activityLogger");
 
 // Get all users
 exports.getUsers = async (req, res) => {
@@ -75,6 +76,15 @@ exports.createUser = async (req, res) => {
 
     await newUser.save();
 
+    logActivity({
+      userId: req.user.id,
+      username: req.user.username,
+      action: "add",
+      module: "users",
+      description: `Created user '${username}' with role '${newUser.role}'`,
+      targetId: newUser._id,
+    });
+
     // Return user without password
     const userResponse = newUser.toObject();
     delete userResponse.password;
@@ -95,6 +105,8 @@ exports.updateUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
+
+    const wasActive = user.isActive;
 
     // Check if username is being changed and if it's already taken
     if (username && username !== user.username) {
@@ -135,6 +147,26 @@ exports.updateUser = async (req, res) => {
 
     await user.save();
 
+    if (isActive !== undefined && isActive !== wasActive) {
+      logActivity({
+        userId: req.user.id,
+        username: req.user.username,
+        action: isActive ? "activate" : "deactivate",
+        module: "users",
+        description: `${isActive ? "Activated" : "Deactivated"} user '${user.username}'`,
+        targetId: user._id,
+      });
+    } else {
+      logActivity({
+        userId: req.user.id,
+        username: req.user.username,
+        action: "edit",
+        module: "users",
+        description: `Updated user '${user.username}'`,
+        targetId: user._id,
+      });
+    }
+
     // Return user without password
     const userResponse = user.toObject();
     delete userResponse.password;
@@ -160,6 +192,15 @@ exports.deleteUser = async (req, res) => {
     }
 
     await User.findByIdAndDelete(req.params.id);
+
+    logActivity({
+      userId: req.user.id,
+      username: req.user.username,
+      action: "delete",
+      module: "users",
+      description: `Deleted user '${user.username}'`,
+      targetId: user._id,
+    });
 
     res.json({ message: "User deleted successfully" });
   } catch (error) {

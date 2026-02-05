@@ -7,9 +7,9 @@ export default function LogoutButton() {
   const navigate = useNavigate();
   const { logout } = useAuth();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     try {
-      logout();
+      await logout();
       navigate("/");
     } catch (err) {
       console.error("Logout error:", err);

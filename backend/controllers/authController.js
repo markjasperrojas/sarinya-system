@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const logActivity = require("../utils/activityLogger");
 
 // REGISTER (only once)
 exports.register = async (req, res) => {
@@ -44,6 +45,14 @@ exports.login = async (req, res) => {
       expiresIn: "1d",
     });
 
+    logActivity({
+      userId: user._id,
+      username: user.username,
+      action: "login",
+      module: "auth",
+      description: `User '${user.username}' logged in`,
+    });
+
     res.json({
       message: "Login successful!",
       token,
@@ -57,5 +66,22 @@ exports.login = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: "Login failed" });
+  }
+};
+
+// LOGOUT
+exports.logout = async (req, res) => {
+  try {
+    logActivity({
+      userId: req.user.id,
+      username: req.user.username,
+      action: "logout",
+      module: "auth",
+      description: `User '${req.user.username}' logged out`,
+    });
+
+    res.json({ message: "Logged out successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Logout failed" });
   }
 };

@@ -1,4 +1,5 @@
 const Sale = require("../models/Sale");
+const logActivity = require("../utils/activityLogger");
 
 // CREATE SALE
 exports.addSale = async (req, res) => {
@@ -10,13 +11,21 @@ exports.addSale = async (req, res) => {
     const sale = new Sale({ itemName, quantity, price, total });
     await sale.save();
 
+    logActivity({
+      userId: req.user.id,
+      username: req.user.username,
+      action: "add",
+      module: "sales",
+      description: `Added sale record for '${itemName}'`,
+      targetId: sale._id,
+    });
+
     res.json({ message: "Sale recorded!", sale });
   } catch (error) {
     res.status(500).json({ error: "Add sale failed" });
   }
 };
 
-// READ ALL SALES
 // READ ALL SALES
 exports.getSales = async (req, res) => {
   try {
@@ -92,6 +101,15 @@ exports.updateSale = async (req, res) => {
       { new: true }
     );
 
+    logActivity({
+      userId: req.user.id,
+      username: req.user.username,
+      action: "edit",
+      module: "sales",
+      description: `Updated sale record for '${updatedSale.itemName}'`,
+      targetId: updatedSale._id,
+    });
+
     res.json({ message: "Sale updated!", updatedSale });
   } catch (error) {
     res.status(500).json({ error: "Update sale failed" });
@@ -103,7 +121,21 @@ exports.deleteSale = async (req, res) => {
   try {
     const { id } = req.params;
 
+    const sale = await Sale.findById(id);
+    if (!sale) {
+      return res.status(404).json({ error: "Sale not found" });
+    }
+
     await Sale.findByIdAndDelete(id);
+
+    logActivity({
+      userId: req.user.id,
+      username: req.user.username,
+      action: "delete",
+      module: "sales",
+      description: `Deleted sale record for '${sale.itemName}'`,
+      targetId: sale._id,
+    });
 
     res.json({ message: "Sale deleted!" });
   } catch (error) {

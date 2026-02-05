@@ -8,6 +8,7 @@ const authRoutes = require("./routes/authRoutes");
 const inventoryRoutes = require("./routes/inventoryRoutes");
 const salesRoutes = require("./routes/salesRoutes");
 const userRoutes = require("./routes/userRoutes");
+const activityLogRoutes = require("./routes/activityLogRoutes");
 
 // Initialize Express app
 const app = express();
@@ -25,6 +26,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/sales", salesRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/activity-logs", activityLogRoutes);
 
 // Basic route for testing
 app.get("/", (req, res) => {

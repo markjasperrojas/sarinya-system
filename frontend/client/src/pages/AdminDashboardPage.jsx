@@ -11,6 +11,7 @@ import {
   UserCheck,
   LayoutDashboard,
   ArrowRight,
+  ClipboardList,
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
@@ -119,6 +120,13 @@ export default function AdminDashboardPage() {
             <Link to="/admin/users">
               <Button icon={Users} variant="primary">
                 Manage Users
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </Link>
+
+            <Link to="/admin/activity-logs">
+              <Button icon={ClipboardList} variant="primary">
+                Activity Logs
                 <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </Link>
