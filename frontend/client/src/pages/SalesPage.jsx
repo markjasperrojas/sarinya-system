@@ -113,7 +113,7 @@ export default function SalesPage() {
         </div>
 
         {/* Filters and Search */}
-        <div className="card p-4 mb-6 sticky top-20 z-30">
+        <div className="card p-4 mb-6">
           <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
             {/* Search */}
             <form onSubmit={handleSearch} className="relative w-full md:w-96">
@@ -149,7 +149,7 @@ export default function SalesPage() {
                     setTimeRange(range);
                     setSelectedDate(""); // Clear date when preset is clicked
                   }}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize whitespace-nowrap ${
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all capitalize whitespace-nowrap ${
                     timeRange === range
                       ? "bg-primary-600 text-white shadow-md shadow-primary-500/20"
                       : "bg-gray-50 text-gray-600 hover:bg-gray-100"
