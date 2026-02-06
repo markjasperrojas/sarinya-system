@@ -96,9 +96,6 @@ export default function DashboardPage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
-                <p className="text-xs text-gray-500 hidden sm:block">
-                  Sarinya Restaurant
-                </p>
               </div>
             </div>
           </div>
