@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getActivityLogs } from "../services/activityLogService";
-import { getUsers } from "../services/userService";
 import TableSkeleton from "../components/TableSkeleton";
 import Button from "../components/Button";
 import {
@@ -35,7 +34,6 @@ const moduleColors = {
 export default function ActivityLogsPage() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState([]);
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
@@ -46,10 +44,7 @@ export default function ActivityLogsPage() {
   // Filters
   const [search, setSearch] = useState("");
   const [moduleFilter, setModuleFilter] = useState("");
-  const [actionFilter, setActionFilter] = useState("");
-  const [userFilter, setUserFilter] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
 
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
@@ -59,7 +54,6 @@ export default function ActivityLogsPage() {
       navigate("/dashboard");
       return;
     }
-    loadUsers();
   }, []);
 
   const loadLogs = useCallback(
@@ -69,10 +63,10 @@ export default function ActivityLogsPage() {
         const params = { page, limit: 20 };
         if (search) params.search = search;
         if (moduleFilter) params.module = moduleFilter;
-        if (actionFilter) params.action = actionFilter;
-        if (userFilter) params.user = userFilter;
-        if (startDate) params.startDate = startDate;
-        if (endDate) params.endDate = endDate;
+        if (selectedDate) {
+          params.startDate = selectedDate;
+          params.endDate = selectedDate;
+        }
 
         const data = await getActivityLogs(params);
         setLogs(data.logs);
@@ -83,32 +77,20 @@ export default function ActivityLogsPage() {
         setLoading(false);
       }
     },
-    [search, moduleFilter, actionFilter, userFilter, startDate, endDate]
+    [search, moduleFilter, selectedDate]
   );
 
   useEffect(() => {
     loadLogs(1);
   }, [loadLogs]);
 
-  const loadUsers = async () => {
-    try {
-      const data = await getUsers();
-      setUsers(data);
-    } catch (error) {
-      console.error("Failed to load users:", error);
-    }
-  };
-
   const clearFilters = () => {
     setSearch("");
     setModuleFilter("");
-    setActionFilter("");
-    setUserFilter("");
-    setStartDate("");
-    setEndDate("");
+    setSelectedDate("");
   };
 
-  const hasFilters = search || moduleFilter || actionFilter || userFilter || startDate || endDate;
+  const hasFilters = search || moduleFilter || selectedDate;
 
   return (
     <>
@@ -137,7 +119,7 @@ export default function ActivityLogsPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-8">
         {/* Filters Card */}
         <div className="card p-4 sm:p-6 mb-6 animate-fade-in">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -163,53 +145,12 @@ export default function ActivityLogsPage() {
               <option value="auth">Auth</option>
             </select>
 
-            {/* Action Filter */}
-            <select
-              value={actionFilter}
-              onChange={(e) => setActionFilter(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all"
-            >
-              <option value="">All Actions</option>
-              <option value="add">Add</option>
-              <option value="edit">Edit</option>
-              <option value="delete">Delete</option>
-              <option value="sell">Sell</option>
-              <option value="login">Login</option>
-              <option value="logout">Logout</option>
-              <option value="activate">Activate</option>
-              <option value="deactivate">Deactivate</option>
-            </select>
-
-            {/* User Filter */}
-            <select
-              value={userFilter}
-              onChange={(e) => setUserFilter(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all"
-            >
-              <option value="">All Users</option>
-              {users.map((u) => (
-                <option key={u._id} value={u.username}>
-                  {u.username}
-                </option>
-              ))}
-            </select>
-
-            {/* Start Date */}
+            {/* Date Filter */}
             <input
               type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all"
-              placeholder="Start Date"
-            />
-
-            {/* End Date */}
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all"
-              placeholder="End Date"
             />
           </div>
 
