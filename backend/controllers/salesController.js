@@ -116,6 +116,49 @@ exports.updateSale = async (req, res) => {
   }
 };
 
+// GET MONTHLY SALES ANALYTICS
+exports.getMonthlySales = async (req, res) => {
+  try {
+    const year = parseInt(req.query.year) || new Date().getFullYear();
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year, 11, 31, 23, 59, 59, 999);
+
+    const result = await Sale.aggregate([
+      { $match: { date: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: { $month: "$date" }, revenue: { $sum: "$total" } } },
+      { $sort: { _id: 1 } },
+    ]);
+
+    const MONTH_LABELS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const revenueMap = {};
+    result.forEach((r) => { revenueMap[r._id] = r.revenue; });
+
+    const monthly = MONTH_LABELS.map((label, i) => ({
+      month: i + 1,
+      label,
+      revenue: revenueMap[i + 1] || 0,
+    }));
+
+    res.json(monthly);
+  } catch (error) {
+    res.status(500).json({ error: "Get monthly sales failed" });
+  }
+};
+
+// GET AVAILABLE YEARS
+exports.getAvailableYears = async (req, res) => {
+  try {
+    const result = await Sale.aggregate([
+      { $group: { _id: { $year: "$date" } } },
+      { $sort: { _id: 1 } },
+    ]);
+    const years = result.map((r) => r._id);
+    res.json(years);
+  } catch (error) {
+    res.status(500).json({ error: "Get available years failed" });
+  }
+};
+
 // DELETE SALE
 exports.deleteSale = async (req, res) => {
   try {
