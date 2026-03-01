@@ -1,17 +1,13 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getUsers } from "../services/userService";
 import StatsCard from "../components/StatsCard";
 import LoadingSpinner from "../components/LoadingSpinner";
-import Button from "../components/Button";
 import {
   Users,
   Shield,
   UserCheck,
-  LayoutDashboard,
-  ArrowRight,
-  ClipboardList,
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
@@ -110,35 +106,6 @@ export default function AdminDashboardPage() {
           />
         </div>
 
-        {/* Quick Actions */}
-        <div className="card p-6 animate-slide-up">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Admin Actions
-          </h2>
-
-          <div className="flex flex-wrap gap-3">
-            <Link to="/admin/users">
-              <Button icon={Users} variant="primary">
-                Manage Users
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
-            </Link>
-
-            <Link to="/admin/activity-logs">
-              <Button icon={ClipboardList} variant="primary">
-                Activity Logs
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
-            </Link>
-
-            <Link to="/dashboard">
-              <Button variant="outline" icon={LayoutDashboard}>
-                Main Dashboard
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
-            </Link>
-          </div>
-        </div>
       </main>
     </>
   );
