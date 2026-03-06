@@ -451,7 +451,7 @@ export default function InventoryPage() {
           <Input
             label="Item Name"
             type="text"
-            placeholder="e.g., Rice, Cooking Oil"
+            placeholder="Enter item name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -596,7 +596,7 @@ export default function InventoryPage() {
             <Input
               label="Item Name"
               type="text"
-              placeholder="e.g., Rice, Cooking Oil"
+              placeholder="Enter item name"
               value={editItem.name}
               onChange={(e) =>
                 setEditItem({ ...editItem, name: e.target.value })
