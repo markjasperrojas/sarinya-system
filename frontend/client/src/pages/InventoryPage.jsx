@@ -431,14 +431,6 @@ export default function InventoryPage() {
           )}
         </div>
 
-        {/* Back Link */}
-        <Link
-          to="/dashboard"
-          className="inline-flex items-center gap-2 mt-6 text-primary-600 hover:text-primary-700 font-medium transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
-        </Link>
       </main>
 
       {/* Add Item Modal */}
