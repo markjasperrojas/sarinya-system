@@ -29,3 +29,8 @@ export const deleteUser = async (id) => {
   const res = await API.delete(`/users/${id}`);
   return res.data;
 };
+
+export const getDefaultPermissions = async () => {
+  const res = await API.get("/users/default-permissions");
+  return res.data;
+};

@@ -202,7 +202,7 @@ export default function ActivityLogsPage() {
                       </td>
                       <td className="px-6 py-4">
                         <span className="font-medium text-gray-900">
-                          {log.username}
+                          {log.userId?.username}
                         </span>
                       </td>
                       <td className="px-6 py-4">

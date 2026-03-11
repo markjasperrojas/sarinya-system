@@ -6,6 +6,7 @@ import {
   createUser,
   updateUser,
   deleteUser,
+  getDefaultPermissions,
 } from "../services/userService";
 import Modal from "../components/Modal";
 import Button from "../components/Button";
@@ -24,23 +25,13 @@ import {
   Search,
 } from "lucide-react";
 
-const defaultPermissions = {
-  inventory: { view: true, add: false, edit: false, delete: false },
-  sales: { view: true, add: true, edit: false, delete: false },
-  users: { view: false, add: false, edit: false, delete: false },
-};
-
-const adminPermissions = {
-  inventory: { view: true, add: true, edit: true, delete: true },
-  sales: { view: true, add: true, edit: true, delete: true },
-  users: { view: true, add: true, edit: true, delete: true },
-};
-
 export default function UserManagementPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [deletingId, setDeletingId] = useState(null);
+  const [defaultPermissions, setDefaultPermissions] = useState(null);
+  const [adminPermissions, setAdminPermissions] = useState(null);
   const navigate = useNavigate();
   const { user: currentUser, isAdmin } = useAuth();
 
@@ -50,7 +41,7 @@ export default function UserManagementPage() {
     username: "",
     password: "",
     role: "staff",
-    permissions: { ...defaultPermissions },
+    permissions: null,
     isActive: true,
   });
   const [adding, setAdding] = useState(false);
@@ -66,6 +57,11 @@ export default function UserManagementPage() {
       return;
     }
     loadUsers();
+    getDefaultPermissions().then(({ defaultStaffPermissions, adminPermissions: ap }) => {
+      setDefaultPermissions(defaultStaffPermissions);
+      setAdminPermissions(ap);
+      setAddForm((f) => ({ ...f, permissions: defaultStaffPermissions }));
+    }).catch((err) => console.error("Failed to load default permissions:", err));
   }, []);
 
   const loadUsers = async () => {
@@ -96,7 +92,7 @@ export default function UserManagementPage() {
         username: "",
         password: "",
         role: "staff",
-        permissions: { ...defaultPermissions },
+        permissions: defaultPermissions,
         isActive: true,
       });
       loadUsers();
@@ -426,7 +422,7 @@ export default function UserManagementPage() {
             </select>
           </div>
 
-          {addForm.role === "staff" && (
+          {addForm.role === "staff" && addForm.permissions && (
             <div className="space-y-3">
               <label className="block text-sm font-medium text-gray-700">
                 Permissions

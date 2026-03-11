@@ -2,6 +2,23 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const logActivity = require("../utils/activityLogger");
 
+const defaultStaffPermissions = {
+  inventory: { view: true, add: false, edit: false, delete: false },
+  sales: { view: true, add: true, edit: false, delete: false },
+  users: { view: false, add: false, edit: false, delete: false },
+};
+
+const adminPermissions = {
+  inventory: { view: true, add: true, edit: true, delete: true },
+  sales: { view: true, add: true, edit: true, delete: true },
+  users: { view: true, add: true, edit: true, delete: true },
+};
+
+// Get default permissions
+exports.getDefaultPermissions = (req, res) => {
+  res.json({ defaultStaffPermissions, adminPermissions });
+};
+
 // Get all users
 exports.getUsers = async (req, res) => {
   try {
@@ -67,18 +84,13 @@ exports.createUser = async (req, res) => {
 
     // If role is admin, grant all permissions
     if (role === "admin") {
-      newUser.permissions = {
-        inventory: { view: true, add: true, edit: true, delete: true },
-        sales: { view: true, add: true, edit: true, delete: true },
-        users: { view: true, add: true, edit: true, delete: true },
-      };
+      newUser.permissions = adminPermissions;
     }
 
     await newUser.save();
 
     logActivity({
       userId: req.user.id,
-      username: req.user.username,
       action: "add",
       module: "users",
       description: `Created user '${username}' with role '${newUser.role}'`,
@@ -127,11 +139,7 @@ exports.updateUser = async (req, res) => {
       user.role = role;
       // If changing to admin, grant all permissions
       if (role === "admin") {
-        user.permissions = {
-          inventory: { view: true, add: true, edit: true, delete: true },
-          sales: { view: true, add: true, edit: true, delete: true },
-          users: { view: true, add: true, edit: true, delete: true },
-        };
+        user.permissions = adminPermissions;
       }
     }
 
@@ -150,7 +158,6 @@ exports.updateUser = async (req, res) => {
     if (isActive !== undefined && isActive !== wasActive) {
       logActivity({
         userId: req.user.id,
-        username: req.user.username,
         action: isActive ? "activate" : "deactivate",
         module: "users",
         description: `${isActive ? "Activated" : "Deactivated"} user '${user.username}'`,
@@ -159,7 +166,6 @@ exports.updateUser = async (req, res) => {
     } else {
       logActivity({
         userId: req.user.id,
-        username: req.user.username,
         action: "edit",
         module: "users",
         description: `Updated user '${user.username}'`,
@@ -195,7 +201,6 @@ exports.deleteUser = async (req, res) => {
 
     logActivity({
       userId: req.user.id,
-      username: req.user.username,
       action: "delete",
       module: "users",
       description: `Deleted user '${user.username}'`,

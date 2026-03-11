@@ -74,7 +74,6 @@ exports.logout = async (req, res) => {
   try {
     logActivity({
       userId: req.user.id,
-      username: req.user.username,
       action: "logout",
       module: "auth",
       description: `User '${req.user.username}' logged out`,

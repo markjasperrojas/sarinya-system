@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"C:\\\\Users\\\\MICHAEL\\\\sarinya-system\" -name \"*.schema*\" -o -name \"schema.js\" -o -name \"schema.ts\" 2>/dev/null | head -20)"
+    ]
+  }
+}

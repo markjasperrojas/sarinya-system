@@ -2,13 +2,9 @@ const ActivityLog = require("../models/ActivityLog");
 
 exports.getActivityLogs = async (req, res) => {
   try {
-    const { user, action, module, startDate, endDate, search, page = 1, limit = 20 } = req.query;
+    const { action, module, startDate, endDate, search, page = 1, limit = 20 } = req.query;
 
     let query = {};
-
-    if (user) {
-      query.username = user;
-    }
 
     if (action) {
       query.action = action;
@@ -39,7 +35,11 @@ exports.getActivityLogs = async (req, res) => {
     const skip = (pageNum - 1) * limitNum;
 
     const [logs, total] = await Promise.all([
-      ActivityLog.find(query).sort({ createdAt: -1 }).skip(skip).limit(limitNum),
+      ActivityLog.find(query)
+        .populate("userId", "username")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum),
       ActivityLog.countDocuments(query),
     ]);
 

@@ -6,14 +6,11 @@ exports.addSale = async (req, res) => {
   try {
     const { itemName, quantity, price } = req.body;
 
-    const total = quantity * price;
-
-    const sale = new Sale({ itemName, quantity, price, total });
+    const sale = new Sale({ itemName, quantity, price });
     await sale.save();
 
     logActivity({
       userId: req.user.id,
-      username: req.user.username,
       action: "add",
       module: "sales",
       description: `Added sale record for '${itemName}'`,
@@ -93,17 +90,14 @@ exports.updateSale = async (req, res) => {
     const { id } = req.params;
     const { itemName, quantity, price } = req.body;
 
-    const total = quantity * price;
-
     const updatedSale = await Sale.findByIdAndUpdate(
       id,
-      { itemName, quantity, price, total },
+      { itemName, quantity, price },
       { new: true }
     );
 
     logActivity({
       userId: req.user.id,
-      username: req.user.username,
       action: "edit",
       module: "sales",
       description: `Updated sale record for '${updatedSale.itemName}'`,
@@ -125,7 +119,7 @@ exports.getMonthlySales = async (req, res) => {
 
     const result = await Sale.aggregate([
       { $match: { date: { $gte: startDate, $lte: endDate } } },
-      { $group: { _id: { $month: "$date" }, revenue: { $sum: "$total" } } },
+      { $group: { _id: { $month: "$date" }, revenue: { $sum: { $multiply: ["$quantity", "$price"] } } } },
       { $sort: { _id: 1 } },
     ]);
 
@@ -173,7 +167,6 @@ exports.deleteSale = async (req, res) => {
 
     logActivity({
       userId: req.user.id,
-      username: req.user.username,
       action: "delete",
       module: "sales",
       description: `Deleted sale record for '${sale.itemName}'`,

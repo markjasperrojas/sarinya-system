@@ -13,6 +13,9 @@ router.get("/profile", userController.getProfile);
 // List all users (requires users.view permission)
 router.get("/", requirePermission("users", "view"), userController.getUsers);
 
+// Get default permissions (must be before /:id)
+router.get("/default-permissions", userController.getDefaultPermissions);
+
 // Get single user (requires users.view permission)
 router.get("/:id", requirePermission("users", "view"), userController.getUser);
 

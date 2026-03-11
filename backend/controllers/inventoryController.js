@@ -12,7 +12,6 @@ exports.addItem = async (req, res) => {
 
     logActivity({
       userId: req.user.id,
-      username: req.user.username,
       action: "add",
       module: "inventory",
       description: `Added inventory item '${name}'`,
@@ -49,7 +48,6 @@ exports.updateItem = async (req, res) => {
 
     logActivity({
       userId: req.user.id,
-      username: req.user.username,
       action: "edit",
       module: "inventory",
       description: `Updated inventory item '${updatedItem.name}'`,
@@ -76,7 +74,6 @@ exports.deleteItem = async (req, res) => {
 
     logActivity({
       userId: req.user.id,
-      username: req.user.username,
       action: "delete",
       module: "inventory",
       description: `Deleted inventory item '${item.name}'`,
@@ -112,9 +109,9 @@ exports.sellItem = async (req, res) => {
     // Create sale record
     const sale = new Sale({
       itemName: item.name,
+      inventoryItemId: item._id,
       quantity,
       price: item.price,
-      total: quantity * item.price,
     });
     await sale.save();
 
@@ -125,7 +122,6 @@ exports.sellItem = async (req, res) => {
 
     logActivity({
       userId: req.user.id,
-      username: req.user.username,
       action: "sell",
       module: "inventory",
       description: `Sold ${quantity} of '${item.name}' for ₱${sale.total}`,

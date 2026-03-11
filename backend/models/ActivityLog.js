@@ -6,10 +6,6 @@ const activityLogSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
-  username: {
-    type: String,
-    required: true,
-  },
   action: {
     type: String,
     enum: ["add", "edit", "delete", "sell", "login", "logout", "activate", "deactivate"],

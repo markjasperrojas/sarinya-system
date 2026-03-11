@@ -212,11 +212,7 @@ export default function DashboardPage() {
 
       setSalesCount(sales.length);
 
-      const revenue = sales.reduce((acc, s) => {
-        const saleTotal =
-          s.total ?? (Number(s.price) * Number(s.quantity) || 0);
-        return acc + Number(saleTotal);
-      }, 0);
+      const revenue = sales.reduce((acc, s) => acc + Number(s.total), 0);
 
       setTotalRevenue(revenue);
 
