@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find \"C:\\\\Users\\\\MICHAEL\\\\sarinya-system\" -name \"*.schema*\" -o -name \"schema.js\" -o -name \"schema.ts\" 2>/dev/null | head -20)"
+      "Bash(find \"C:\\\\Users\\\\MICHAEL\\\\sarinya-system\" -name \"*.schema*\" -o -name \"schema.js\" -o -name \"schema.ts\" 2>/dev/null | head -20)",
+      "Bash(grep -r \"toast\\\\|notification\\\\|alert\" /c/Users/MICHAEL/sarinya-system/frontend/client/src --include=\"*.jsx\" --include=\"*.js\" 2>/dev/null | head -20)",
+      "Bash(grep -r \"setTimeout\\\\|setInterval\\\\|schedule\\\\|cron\\\\|job\" /c/Users/MICHAEL/sarinya-system/backend --include=\"*.js\" ! -path \"*/node_modules/*\" 2>/dev/null | head -20)",
+      "Bash(grep -r \"schedule\\\\|cron\\\\|task\\\\|job\" /c/Users/MICHAEL/sarinya-system/backend --include=\"*.js\" 2>/dev/null | head -30)"
     ]
   }
 }

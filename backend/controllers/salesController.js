@@ -139,6 +139,43 @@ exports.getMonthlySales = async (req, res) => {
   }
 };
 
+// GET DAILY SALES ANALYTICS
+exports.getDailySales = async (req, res) => {
+  try {
+    const year  = parseInt(req.query.year)  || new Date().getFullYear();
+    const month = parseInt(req.query.month) || new Date().getMonth() + 1;
+    const clampedMonth = Math.max(1, Math.min(12, month));
+
+    const startDate = new Date(year, clampedMonth - 1, 1);
+    const endDate   = new Date(year, clampedMonth, 0, 23, 59, 59, 999);
+
+    const result = await Sale.aggregate([
+      { $match: { date: { $gte: startDate, $lte: endDate } } },
+      {
+        $group: {
+          _id: { $dayOfMonth: "$date" },
+          revenue: { $sum: { $multiply: ["$quantity", "$price"] } },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    const revenueMap = {};
+    result.forEach((r) => { revenueMap[r._id] = r.revenue; });
+
+    const daysInMonth = new Date(year, clampedMonth, 0).getDate();
+    const daily = Array.from({ length: daysInMonth }, (_, i) => ({
+      day: i + 1,
+      label: String(i + 1),
+      revenue: revenueMap[i + 1] || 0,
+    }));
+
+    res.json(daily);
+  } catch (error) {
+    res.status(500).json({ error: "Get daily sales failed" });
+  }
+};
+
 // GET AVAILABLE YEARS
 exports.getAvailableYears = async (req, res) => {
   try {

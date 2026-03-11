@@ -29,8 +29,10 @@ import {
 
 const CURRENT_MONTH = new Date().getMonth() + 1; // 1-indexed
 const CURRENT_YEAR = new Date().getFullYear();
+const CURRENT_DAY = new Date().getDate();
+const MONTH_LABELS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-function RevenueChart({ data, selectedYear, onYearChange, minYear }) {
+function RevenueChart({ data, selectedYear, onYearChange, minYear, selectedMonth, onMonthChange }) {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -49,10 +51,12 @@ function RevenueChart({ data, selectedYear, onYearChange, minYear }) {
     return null;
   };
 
-  const getBarColor = (month) => {
-    if (selectedYear < CURRENT_YEAR) return "#93c5fd";
-    if (month === CURRENT_MONTH) return "#3b82f6";
-    if (month < CURRENT_MONTH) return "#93c5fd";
+  const isCurrentPeriod = selectedYear === CURRENT_YEAR && selectedMonth === CURRENT_MONTH;
+
+  const getBarColor = (day) => {
+    if (!isCurrentPeriod) return "#93c5fd";
+    if (day === CURRENT_DAY) return "#3b82f6";
+    if (day < CURRENT_DAY) return "#93c5fd";
     return "#e5e7eb";
   };
 
@@ -61,6 +65,9 @@ function RevenueChart({ data, selectedYear, onYearChange, minYear }) {
     return `₱${value}`;
   };
 
+  const monthRightDisabled = selectedYear === CURRENT_YEAR && selectedMonth >= CURRENT_MONTH;
+  const monthLeftDisabled = selectedMonth <= 1;
+
   return (
     <div className="bg-white rounded-2xl shadow-card p-6 animate-fade-in">
       <div className="flex items-center gap-3 mb-6">
@@ -68,7 +75,7 @@ function RevenueChart({ data, selectedYear, onYearChange, minYear }) {
           <TrendingUp className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-gray-900">Monthly Revenue</h2>
+          <h2 className="text-lg font-bold text-gray-900">Daily Revenue</h2>
           <div className="flex items-center gap-1 mt-0.5">
             <button
               onClick={() => onYearChange((y) => y - 1)}
@@ -83,6 +90,24 @@ function RevenueChart({ data, selectedYear, onYearChange, minYear }) {
             <button
               onClick={() => onYearChange((y) => y + 1)}
               disabled={selectedYear >= CURRENT_YEAR}
+              className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="w-4 h-4 text-gray-600" />
+            </button>
+            <span className="mx-1 text-gray-300">|</span>
+            <button
+              onClick={() => onMonthChange((m) => m - 1)}
+              disabled={monthLeftDisabled}
+              className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-4 h-4 text-gray-600" />
+            </button>
+            <span className="text-sm font-semibold text-gray-700 w-8 text-center">
+              {MONTH_LABELS[selectedMonth - 1]}
+            </span>
+            <button
+              onClick={() => onMonthChange((m) => m + 1)}
+              disabled={monthRightDisabled}
               className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <ChevronRight className="w-4 h-4 text-gray-600" />
@@ -114,26 +139,26 @@ function RevenueChart({ data, selectedYear, onYearChange, minYear }) {
           <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f9fafb" }} />
           <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
             {data.map((entry) => (
-              <Cell key={entry.month} fill={getBarColor(entry.month)} />
+              <Cell key={entry.day} fill={getBarColor(entry.day)} />
             ))}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
 
       <div className="flex items-center gap-6 mt-4 text-xs text-gray-500">
-        {selectedYear === CURRENT_YEAR && (
+        {isCurrentPeriod && (
           <>
             <span className="flex items-center gap-1.5">
               <span className="inline-block w-3 h-3 rounded-sm bg-primary-500"></span>
-              Current month
+              Today
             </span>
           </>
         )}
         <span className="flex items-center gap-1.5">
           <span className="inline-block w-3 h-3 rounded-sm bg-primary-300"></span>
-          Past months
+          Past days
         </span>
-        {selectedYear === CURRENT_YEAR && (
+        {isCurrentPeriod && (
           <>
             <span className="flex items-center gap-1.5">
               <span className="inline-block w-3 h-3 rounded-sm bg-gray-200"></span>
@@ -155,6 +180,7 @@ export default function DashboardPage() {
   const [monthlyRevenue, setMonthlyRevenue] = useState([]);
   const [chartLoading, setChartLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
+  const [selectedMonth, setSelectedMonth] = useState(CURRENT_MONTH);
   const [availableYears, setAvailableYears] = useState([CURRENT_YEAR]);
   const [expiredCount, setExpiredCount] = useState(0);
   const [expiringSoonCount, setExpiringSoonCount] = useState(0);
@@ -171,12 +197,11 @@ export default function DashboardPage() {
     }
     fetchData();
     fetchAvailableYears();
-    fetchMonthlyRevenue(CURRENT_YEAR);
   }, [user, navigate]);
 
   useEffect(() => {
-    if (user) fetchMonthlyRevenue(selectedYear);
-  }, [selectedYear]);
+    if (user) fetchDailyRevenue(selectedYear, selectedMonth);
+  }, [selectedYear, selectedMonth]);
 
   const fetchAvailableYears = async () => {
     try {
@@ -241,13 +266,13 @@ export default function DashboardPage() {
     }
   };
 
-  const fetchMonthlyRevenue = async (year = CURRENT_YEAR) => {
+  const fetchDailyRevenue = async (year = CURRENT_YEAR, month = CURRENT_MONTH) => {
     setChartLoading(true);
     try {
-      const res = await API.get(`/sales/analytics/monthly?year=${year}`);
+      const res = await API.get(`/sales/analytics/daily?year=${year}&month=${month}`);
       setMonthlyRevenue(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      console.error("Monthly revenue fetch error:", err);
+      console.error("Daily revenue fetch error:", err);
     } finally {
       setChartLoading(false);
     }
@@ -338,12 +363,22 @@ export default function DashboardPage() {
           <RevenueChart
             data={monthlyRevenue}
             selectedYear={selectedYear}
-            onYearChange={setSelectedYear}
+            onYearChange={(updater) => {
+              setSelectedYear((prev) => {
+                const next = typeof updater === "function" ? updater(prev) : updater;
+                if (next === CURRENT_YEAR && selectedMonth > CURRENT_MONTH) {
+                  setSelectedMonth(CURRENT_MONTH);
+                }
+                return next;
+              });
+            }}
             minYear={
               availableYears.length > 0
                 ? Math.min(...availableYears)
                 : CURRENT_YEAR
             }
+            selectedMonth={selectedMonth}
+            onMonthChange={setSelectedMonth}
           />
         )}
 
