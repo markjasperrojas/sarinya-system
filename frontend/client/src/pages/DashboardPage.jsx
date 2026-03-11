@@ -222,7 +222,7 @@ export default function DashboardPage() {
     try {
       const [invRes, salesRes] = await Promise.all([
         API.get("/inventory"),
-        API.get("/sales"),
+        API.get("/sales", { params: { timeRange: "monthly" } }),
       ]);
 
       const items = Array.isArray(invRes.data) ? invRes.data : [];
@@ -323,14 +323,14 @@ export default function DashboardPage() {
           />
 
           <StatsCard
-            title="Total Sales"
+            title="Monthly Sales"
             value={salesCount}
             icon={ShoppingCart}
             colorScheme="success"
           />
 
           <StatsCard
-            title="Total Revenue"
+            title="Monthly Revenue"
             value={totalRevenue}
             icon={DollarSign}
             colorScheme="success"
