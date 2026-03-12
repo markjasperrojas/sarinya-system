@@ -447,17 +447,6 @@ export default function InventoryPage() {
           >
             <TriangleAlert className="w-4 h-4" />
             Discrepancies
-            {pullOuts.length > 0 && (
-              <span
-                className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
-                  activeTab === "discrepancies"
-                    ? "bg-red-100 text-red-700"
-                    : "bg-gray-200 text-gray-600"
-                }`}
-              >
-                {pullOuts.length}
-              </span>
-            )}
           </button>
         </div>
 
