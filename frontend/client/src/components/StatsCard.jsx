@@ -9,6 +9,7 @@ export default function StatsCard({
   colorScheme = "primary",
   prefix = "",
   suffix = "",
+  onClick = null,
 }) {
   const colorSchemes = {
     primary: {
@@ -50,7 +51,8 @@ export default function StatsCard({
 
   return (
     <div
-      className={`card p-6 ${colors.bg} border border-gray-100 card-hover`}
+      className={`card p-6 ${colors.bg} border border-gray-100 card-hover ${onClick ? "cursor-pointer" : ""}`}
+      onClick={onClick}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">

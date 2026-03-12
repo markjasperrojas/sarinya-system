@@ -313,6 +313,7 @@ export default function DashboardPage() {
             value={inventoryCount}
             icon={Package}
             colorScheme="primary"
+            onClick={() => navigate("/inventory")}
           />
 
           <StatsCard
@@ -320,6 +321,7 @@ export default function DashboardPage() {
             value={lowStockCount}
             icon={AlertTriangle}
             colorScheme={lowStockCount > 0 ? "warning" : "success"}
+            onClick={() => navigate("/inventory?sort=quantity&dir=asc")}
           />
 
           <StatsCard
@@ -327,6 +329,7 @@ export default function DashboardPage() {
             value={salesCount}
             icon={ShoppingCart}
             colorScheme="success"
+            onClick={() => navigate("/sales")}
           />
 
           <StatsCard
@@ -335,6 +338,7 @@ export default function DashboardPage() {
             icon={Banknote}
             colorScheme="success"
             prefix="₱"
+            onClick={() => navigate("/sales")}
           />
         </div>
 
@@ -345,12 +349,14 @@ export default function DashboardPage() {
             value={expiredCount}
             icon={CalendarX}
             colorScheme={expiredCount > 0 ? "danger" : "success"}
+            onClick={() => navigate("/inventory?sort=expirationDate&dir=asc")}
           />
           <StatsCard
             title="Expiring Soon (≤ 7 days)"
             value={expiringSoonCount}
             icon={CalendarClock}
             colorScheme={expiringSoonCount > 0 ? "warning" : "success"}
+            onClick={() => navigate("/inventory?sort=expirationDate&dir=asc")}
           />
         </div>
 

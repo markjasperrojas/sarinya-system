@@ -6,7 +6,7 @@ import {
   updateInventoryItem,
 } from "../services/inventoryService";
 import API from "../api";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import Modal from "../components/Modal";
 import Button from "../components/Button";
@@ -52,12 +52,22 @@ export default function InventoryPage() {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
 
   const { hasPermission } = useAuth();
+  const location = useLocation();
 
   const LOW_STOCK_THRESHOLD = 5;
 
   useEffect(() => {
     loadItems();
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const sort = params.get("sort");
+    const dir = params.get("dir");
+    if (sort && ["name", "quantity", "price", "expirationDate"].includes(sort)) {
+      setSortConfig({ key: sort, direction: dir === "desc" ? "desc" : "asc" });
+    }
+  }, [location.search]);
 
   const loadItems = async () => {
     setLoading(true);
