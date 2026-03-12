@@ -101,7 +101,7 @@ export default function SalesPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-success-100 text-sm font-medium">
-                {timeRange === "all" ? "Total" : timeRange.charAt(0).toUpperCase() + timeRange.slice(1)} Revenue
+                {{ all: "Total", daily: "Today's", weekly: "This Week's", monthly: "This Month's", yearly: "This Year's" }[timeRange] || timeRange} Revenue
               </p>
               <p className="text-3xl sm:text-4xl font-bold mt-1">
                 ₱{overallTotal.toLocaleString()}
@@ -117,7 +117,7 @@ export default function SalesPage() {
         <div className="card p-4 mb-6">
           <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
             {/* Search */}
-            <form onSubmit={handleSearch} className="relative w-full md:w-96">
+            <form onSubmit={handleSearch} className="relative w-full md:w-52">
               <input
                 type="text"
                 placeholder="Search items..."
@@ -129,7 +129,7 @@ export default function SalesPage() {
             </form>
 
             {/* Time Range Filter */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto custom-scrollbar">
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto min-w-0 scrollbar-hide">
               <Filter className="w-5 h-5 text-gray-400 hidden md:block" />
               
               {/* Date Picker */}
