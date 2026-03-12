@@ -18,6 +18,7 @@ const actionColors = {
   edit: "bg-blue-100 text-blue-800",
   delete: "bg-red-100 text-red-800",
   sell: "bg-amber-100 text-amber-800",
+  pull_out: "bg-orange-100 text-orange-800",
   login: "bg-indigo-100 text-indigo-800",
   logout: "bg-gray-100 text-gray-800",
   activate: "bg-emerald-100 text-emerald-800",

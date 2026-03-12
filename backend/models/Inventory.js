@@ -17,6 +17,22 @@ const inventorySchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
+  status: {
+    type: String,
+    enum: ["active", "pulled_out"],
+    default: "active",
+  },
+  pullOutReason: {
+    type: String,
+  },
+  replacedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Inventory",
+  },
+  replacedFrom: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Inventory",
+  },
   updatedAt: {
     type: Date,
     default: Date.now,

@@ -1,8 +1,14 @@
 import API from "../api";
 
-// GET all inventory items
+// GET all inventory items (active only)
 export const getInventoryItems = async () => {
   const res = await API.get("/inventory");
+  return res.data;
+};
+
+// GET pull-out records
+export const getPullOuts = async () => {
+  const res = await API.get("/inventory/pullouts");
   return res.data;
 };
 
@@ -27,5 +33,11 @@ export const deleteInventoryItem = async (id) => {
 // SELL item
 export const sellInventoryItem = async (id, quantity) => {
   const res = await API.post(`/inventory/${id}/sell`, { quantity });
+  return res.data;
+};
+
+// PULL OUT item
+export const pullOutInventoryItem = async (id, data) => {
+  const res = await API.post(`/inventory/${id}/pullout`, data);
   return res.data;
 };
