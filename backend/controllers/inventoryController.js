@@ -7,14 +7,45 @@ const logActivity = require("../utils/activityLogger");
 // CREATE
 exports.addItem = async (req, res) => {
   try {
-    const { productId, quantity, price, expirationDate } = req.body;
+    const { productId, quantity, expirationDate } = req.body;
 
     const product = await Product.findById(productId);
     if (!product) return res.status(404).json({ error: "Product not found" });
 
-    const item = new Inventory({ product: productId, quantity, price, expirationDate });
+    // Normalize expiry to start-of-day for duplicate detection
+    const expDate = new Date(expirationDate);
+    const startOfDay = new Date(expDate);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(expDate);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
+    // Auto-merge if same product + same expiry date already has an active batch
+    const existingBatch = await Inventory.findOne({
+      product: productId,
+      status: { $ne: "pulled_out" },
+      expirationDate: { $gte: startOfDay, $lte: endOfDay },
+    });
+
+    if (existingBatch) {
+      existingBatch.quantity += Number(quantity);
+      existingBatch.updatedAt = Date.now();
+      await existingBatch.save();
+      await existingBatch.populate("product", "name price");
+
+      logActivity({
+        userId: req.user.id,
+        action: "edit",
+        module: "inventory",
+        description: `Merged ${quantity} units into existing '${product.name}' batch (expiry ${expDate.toLocaleDateString()})`,
+        targetId: existingBatch._id,
+      });
+
+      return res.json({ message: "Merged into existing batch!", item: existingBatch, merged: true });
+    }
+
+    const item = new Inventory({ product: productId, quantity, expirationDate });
     await item.save();
-    await item.populate("product", "name unit");
+    await item.populate("product", "name price");
 
     logActivity({
       userId: req.user.id,
@@ -34,7 +65,7 @@ exports.addItem = async (req, res) => {
 exports.getItems = async (req, res) => {
   try {
     const items = await Inventory.find({ status: { $ne: "pulled_out" } })
-      .populate("product", "name unit")
+      .populate("product", "name price")
       .sort({ updatedAt: -1 });
     res.json(items);
   } catch (error) {
@@ -46,14 +77,13 @@ exports.getItems = async (req, res) => {
 exports.updateItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const { productId, quantity, price, expirationDate } = req.body;
+    const { quantity, expirationDate } = req.body;
 
-    const updateData = { quantity, price, expirationDate, updatedAt: Date.now() };
-    if (productId) updateData.product = productId;
+    const updateData = { quantity, expirationDate, updatedAt: Date.now() };
 
     const updatedItem = await Inventory.findByIdAndUpdate(id, updateData, { new: true }).populate(
       "product",
-      "name unit"
+      "name price"
     );
 
     logActivity({
@@ -100,18 +130,20 @@ exports.sellItem = async (req, res) => {
     const { id } = req.params;
     const { quantity } = req.body;
 
-    const item = await Inventory.findById(id).populate("product", "name");
+    const item = await Inventory.findById(id).populate("product", "name price");
 
     if (!item) return res.status(404).json({ error: "Item not found" });
     if (quantity <= 0) return res.status(400).json({ error: "Quantity must be greater than 0" });
     if (quantity > item.quantity) return res.status(400).json({ error: "Not enough stock available" });
+
+    const price = item.product.price;
 
     const sale = new Sale({
       itemName: item.product.name,
       product: item.product._id,
       inventoryItemId: item._id,
       quantity,
-      price: item.price,
+      price,
     });
     await sale.save();
 
@@ -139,7 +171,7 @@ exports.pullOutItem = async (req, res) => {
     const { id } = req.params;
     const { quantityPulledOut, reason, addReplacement, replacementQuantity, replacementExpirationDate } = req.body;
 
-    const item = await Inventory.findById(id).populate("product", "name");
+    const item = await Inventory.findById(id).populate("product", "name price");
     if (!item) return res.status(404).json({ error: "Item not found" });
 
     if (quantityPulledOut <= 0) return res.status(400).json({ error: "Quantity must be greater than 0" });
@@ -161,7 +193,6 @@ exports.pullOutItem = async (req, res) => {
       replacementItem = new Inventory({
         product: item.product._id,
         quantity: Number(replacementQuantity),
-        price: item.price,
         expirationDate: replacementExpirationDate,
         status: "active",
         replacedFrom: item._id,

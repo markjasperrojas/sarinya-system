@@ -5,6 +5,7 @@ import NavItem from "./NavItem";
 import {
   LayoutDashboard,
   Package,
+  Tag,
   ShoppingCart,
   Shield,
   User,
@@ -55,6 +56,15 @@ export default function BottomNav() {
             to="/inventory"
             icon={Package}
             label="Inventory"
+            variant="bottom"
+          />
+        )}
+
+        {hasPermission("inventory", "view") && (
+          <NavItem
+            to="/products"
+            icon={Tag}
+            label="Products"
             variant="bottom"
           />
         )}

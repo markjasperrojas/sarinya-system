@@ -9,6 +9,7 @@ import SalesPage from "./pages/SalesPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import ActivityLogsPage from "./pages/ActivityLogsPage";
+import ProductsPage from "./pages/ProductsPage";
 
 function App() {
   return (
@@ -34,6 +35,18 @@ function App() {
               >
                 <Layout>
                   <InventoryPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/products"
+            element={
+              <ProtectedRoute
+                requiredPermission={{ module: "inventory", action: "view" }}
+              >
+                <Layout>
+                  <ProductsPage />
                 </Layout>
               </ProtectedRoute>
             }

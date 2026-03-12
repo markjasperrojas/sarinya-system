@@ -5,6 +5,7 @@ import {
   ChefHat,
   LayoutDashboard,
   Package,
+  Tag,
   ShoppingCart,
   Shield,
   LogOut,
@@ -38,6 +39,10 @@ export default function Sidebar() {
 
         {hasPermission("inventory", "view") && (
           <NavItem to="/inventory" icon={Package} label="Inventory" />
+        )}
+
+        {hasPermission("inventory", "view") && (
+          <NavItem to="/products" icon={Tag} label="Products" />
         )}
 
         {hasPermission("sales", "view") && (

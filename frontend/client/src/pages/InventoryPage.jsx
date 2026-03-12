@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   getInventoryItems,
   getPullOuts,
@@ -9,7 +9,6 @@ import {
 } from "../services/inventoryService";
 import { getProducts, createProduct } from "../services/productService";
 import API from "../api";
-import { useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import Modal from "../components/Modal";
 import Button from "../components/Button";
@@ -23,12 +22,12 @@ import {
   Search,
   ShoppingCart,
   Pencil,
-  ArrowUpDown,
-  ChevronUp,
-  ChevronDown,
   PackageMinus,
   ArrowLeftRight,
   TriangleAlert,
+  ArrowUpDown,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 
 const LOW_STOCK_THRESHOLD = 5;
@@ -56,7 +55,7 @@ export default function InventoryPage() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const [sortConfig, setSortConfig] = useState({ key: "name", direction: "asc" });
   const [deletingId, setDeletingId] = useState(null);
 
   // Discrepancies state
@@ -72,9 +71,10 @@ export default function InventoryPage() {
   const [selectedProductId, setSelectedProductId] = useState("");
   const [isAddingNewProduct, setIsAddingNewProduct] = useState(false);
   const [newProductName, setNewProductName] = useState("");
+  const [newProductPrice, setNewProductPrice] = useState("");
+  const [newProductError, setNewProductError] = useState("");
   const [creatingProduct, setCreatingProduct] = useState(false);
   const [quantity, setQuantity] = useState("");
-  const [price, setPrice] = useState("");
   const [expirationDate, setExpirationDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -100,7 +100,6 @@ export default function InventoryPage() {
   const [pullingOut, setPullingOut] = useState(false);
 
   const { hasPermission } = useAuth();
-  const location = useLocation();
 
   useEffect(() => {
     loadItems();
@@ -111,16 +110,7 @@ export default function InventoryPage() {
     if (activeTab === "discrepancies" && pullOuts.length === 0) {
       loadPullOuts();
     }
-  }, [activeTab]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const sort = params.get("sort");
-    const dir = params.get("dir");
-    if (sort && ["name", "quantity", "price", "expirationDate"].includes(sort)) {
-      setSortConfig({ key: sort, direction: dir === "desc" ? "desc" : "asc" });
-    }
-  }, [location.search]);
+  }, [activeTab, pullOuts.length]);
 
   const loadItems = async () => {
     setLoading(true);
@@ -157,17 +147,20 @@ export default function InventoryPage() {
 
   // --- Add Item ---
   const handleCreateProduct = async () => {
-    if (!newProductName.trim()) return;
+    if (!newProductName.trim() || newProductPrice === "") return;
+    setNewProductError("");
     setCreatingProduct(true);
     try {
-      const data = await createProduct({ name: newProductName.trim() });
+      const data = await createProduct({ name: newProductName.trim(), price: Number(newProductPrice) });
       const newProduct = data.product;
       setProducts((prev) => [...prev, newProduct].sort((a, b) => a.name.localeCompare(b.name)));
       setSelectedProductId(newProduct._id);
       setIsAddingNewProduct(false);
       setNewProductName("");
+      setNewProductPrice("");
+      setNewProductError("");
     } catch (error) {
-      alert("Failed to create product");
+      setNewProductError(error.response?.data?.error || "Failed to create product");
     } finally {
       setCreatingProduct(false);
     }
@@ -175,18 +168,20 @@ export default function InventoryPage() {
 
   const handleAddItem = async (e) => {
     e.preventDefault();
-    if (!selectedProductId || !quantity || !price || !expirationDate) return;
+    if (!selectedProductId || !quantity || !expirationDate) return;
     setSubmitting(true);
     try {
-      await addInventoryItem({ productId: selectedProductId, quantity, price, expirationDate });
+      await addInventoryItem({ productId: selectedProductId, quantity, expirationDate });
       setSelectedProductId("");
       setIsAddingNewProduct(false);
       setNewProductName("");
+      setNewProductPrice("");
+      setNewProductError("");
       setQuantity("");
-      setPrice("");
       setExpirationDate("");
       setIsModalOpen(false);
       loadItems();
+      loadProducts(); // refresh product list in case a new one was created
     } catch (error) {
       console.error("Add item failed:", error);
     } finally {
@@ -199,8 +194,9 @@ export default function InventoryPage() {
     setSelectedProductId("");
     setIsAddingNewProduct(false);
     setNewProductName("");
+    setNewProductPrice("");
+    setNewProductError("");
     setQuantity("");
-    setPrice("");
     setExpirationDate("");
   };
 
@@ -246,13 +242,13 @@ export default function InventoryPage() {
     }
   };
 
-  const sellPreviewTotal = selectedItem ? Number(sellQuantity || 0) * selectedItem.price : 0;
+  const itemPrice = selectedItem?.product?.price ?? 0;
+  const sellPreviewTotal = Number(sellQuantity || 0) * itemPrice;
 
   // --- Edit ---
   const handleOpenEditModal = (item) => {
     setEditItem({
       ...item,
-      productId: item.product?._id,
       expirationDate: item.expirationDate ? new Date(item.expirationDate).toISOString().split("T")[0] : "",
     });
     setIsEditModalOpen(true);
@@ -265,13 +261,11 @@ export default function InventoryPage() {
 
   const handleEditItem = async (e) => {
     e.preventDefault();
-    if (!editItem.productId || !editItem.quantity || !editItem.price || !editItem.expirationDate) return;
+    if (!editItem.quantity || !editItem.expirationDate) return;
     setEditing(true);
     try {
       await updateInventoryItem(editItem._id, {
-        productId: editItem.productId,
         quantity: Number(editItem.quantity),
-        price: Number(editItem.price),
         expirationDate: editItem.expirationDate,
       });
       handleCloseEditModal();
@@ -349,6 +343,18 @@ export default function InventoryPage() {
     return "normal";
   };
 
+  const getDaysLabel = (dateString) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expDate = new Date(dateString);
+    expDate.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return "Expired";
+    if (diffDays === 0) return "Today";
+    if (diffDays <= 7) return `${diffDays}d left`;
+    return null;
+  };
+
   const handleSort = (key) => {
     setSortConfig((prev) =>
       prev.key === key
@@ -366,20 +372,57 @@ export default function InventoryPage() {
     );
   };
 
-  const filteredItems = [...items]
-    .filter((item) => item.product?.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    .sort((a, b) => {
-      if (!sortConfig.key) return 0;
-      let aVal = sortConfig.key === "name" ? a.product?.name : a[sortConfig.key];
-      let bVal = sortConfig.key === "name" ? b.product?.name : b[sortConfig.key];
-      if (sortConfig.key === "expirationDate") {
-        aVal = new Date(aVal);
-        bVal = new Date(bVal);
-      }
-      if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
-      return 0;
+  // Group items by product — filter empty batches, sort groups, sort batches by expiry asc
+  // Returns a flat list of rows: { item, product, isFirst, isLast }
+  const flatRows = useMemo(() => {
+    const filtered = items.filter(
+      (item) =>
+        item.quantity > 0 &&
+        item.product?.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const groups = {};
+    filtered.forEach((item) => {
+      const pid = item.product?._id;
+      if (!pid) return;
+      if (!groups[pid]) groups[pid] = { product: item.product, batches: [] };
+      groups[pid].batches.push(item);
     });
+
+    // Sort batches within each group by expiry ascending
+    Object.values(groups).forEach((g) => {
+      g.batches.sort((a, b) => new Date(a.expirationDate) - new Date(b.expirationDate));
+    });
+
+    // Sort groups
+    const sortedGroups = Object.values(groups).sort((a, b) => {
+      let aVal, bVal;
+      if (sortConfig.key === "price") {
+        aVal = a.product.price; bVal = b.product.price;
+      } else if (sortConfig.key === "quantity") {
+        aVal = a.batches.reduce((s, i) => s + i.quantity, 0);
+        bVal = b.batches.reduce((s, i) => s + i.quantity, 0);
+      } else if (sortConfig.key === "expirationDate") {
+        aVal = new Date(a.batches[0].expirationDate);
+        bVal = new Date(b.batches[0].expirationDate);
+      } else {
+        aVal = a.product.name; bVal = b.product.name;
+      }
+      if (typeof aVal === "string") {
+        return sortConfig.direction === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+      return sortConfig.direction === "asc" ? aVal - bVal : bVal - aVal;
+    });
+
+    return sortedGroups.flatMap(({ product, batches }) =>
+      batches.map((item, idx) => ({
+        item,
+        product,
+        isFirst: idx === 0,
+        isLast: idx === batches.length - 1,
+      }))
+    );
+  }, [items, searchTerm, sortConfig]);
 
   const filteredPullOuts = pullOuts.filter((p) =>
     p.itemName.toLowerCase().includes(discrepancySearch.toLowerCase())
@@ -390,6 +433,8 @@ export default function InventoryPage() {
     Number(pullOutQuantity) > 0 &&
     Number(pullOutQuantity) <= (pullOutItem?.quantity || 0) &&
     (!addReplacement || (replacementQuantity && replacementExpirationDate));
+
+  const selectedProduct = products.find((p) => p._id === selectedProductId);
 
   return (
     <>
@@ -403,7 +448,7 @@ export default function InventoryPage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Inventory</h1>
-                <p className="text-xs text-gray-500 hidden sm:block">{items.length} active items</p>
+                <p className="text-xs text-gray-500 hidden sm:block">{items.filter(i => i.quantity > 0).length} active batches</p>
               </div>
             </div>
 
@@ -434,7 +479,7 @@ export default function InventoryPage() {
                 activeTab === "stock" ? "bg-primary-100 text-primary-700" : "bg-gray-200 text-gray-600"
               }`}
             >
-              {items.length}
+              {items.filter(i => i.quantity > 0).length}
             </span>
           </button>
           <button
@@ -480,33 +525,25 @@ export default function InventoryPage() {
                           onClick={() => handleSort("name")}
                           className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100"
                         >
-                          <span className="flex items-center">
-                            Item Name <SortIcon col="name" />
-                          </span>
-                        </th>
-                        <th
-                          onClick={() => handleSort("quantity")}
-                          className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100"
-                        >
-                          <span className="flex items-center">
-                            Quantity <SortIcon col="quantity" />
-                          </span>
+                          <span className="flex items-center">Item Name <SortIcon col="name" /></span>
                         </th>
                         <th
                           onClick={() => handleSort("price")}
                           className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100"
                         >
-                          <span className="flex items-center">
-                            Price <SortIcon col="price" />
-                          </span>
+                          <span className="flex items-center">Price <SortIcon col="price" /></span>
+                        </th>
+                        <th
+                          onClick={() => handleSort("quantity")}
+                          className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100"
+                        >
+                          <span className="flex items-center">Quantity <SortIcon col="quantity" /></span>
                         </th>
                         <th
                           onClick={() => handleSort("expirationDate")}
                           className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100"
                         >
-                          <span className="flex items-center">
-                            Expiration Date <SortIcon col="expirationDate" />
-                          </span>
+                          <span className="flex items-center">Expiration Date <SortIcon col="expirationDate" /></span>
                         </th>
                         <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
                           Actions
@@ -514,110 +551,7 @@ export default function InventoryPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {filteredItems.map((item) => {
-                        const isLowStock = Number(item.quantity) <= LOW_STOCK_THRESHOLD;
-                        return (
-                          <tr key={item._id} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className={`w-2 h-2 rounded-full ${
-                                    isLowStock ? "bg-warning-500" : "bg-success-500"
-                                  }`}
-                                />
-                                <span className="font-medium text-gray-900">{item.product?.name}</span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
-                                  isLowStock
-                                    ? "bg-warning-100 text-warning-800"
-                                    : "bg-success-100 text-success-800"
-                                }`}
-                              >
-                                {item.quantity}
-                                {isLowStock && <AlertCircle className="w-3 h-3 ml-1" />}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-gray-600">₱{item.price?.toLocaleString() || 0}</td>
-                            <td className="px-6 py-4">
-                              {(() => {
-                                const status = getExpirationStatus(item.expirationDate);
-                                const statusStyles = {
-                                  expired: "bg-red-100 text-red-800",
-                                  warning: "bg-yellow-100 text-yellow-800",
-                                  normal: "bg-green-100 text-green-800",
-                                };
-                                const statusLabels = {
-                                  expired: "Expired",
-                                  warning: "Expiring Soon",
-                                  normal: "",
-                                };
-                                return (
-                                  <span
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${statusStyles[status]}`}
-                                  >
-                                    {formatDate(item.expirationDate)}
-                                    {statusLabels[status] && (
-                                      <span className="ml-1 text-xs">({statusLabels[status]})</span>
-                                    )}
-                                  </span>
-                                );
-                              })()}
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                              <div className="flex items-center justify-center gap-2 flex-wrap">
-                                {hasPermission("sales", "add") && (
-                                  <Button
-                                    variant="success"
-                                    size="small"
-                                    icon={ShoppingCart}
-                                    onClick={() => handleOpenSellModal(item)}
-                                    disabled={item.quantity === 0}
-                                  >
-                                    Sell
-                                  </Button>
-                                )}
-                                {hasPermission("inventory", "edit") && (
-                                  <>
-                                    <Button
-                                      variant="primary"
-                                      size="small"
-                                      icon={Pencil}
-                                      onClick={() => handleOpenEditModal(item)}
-                                    >
-                                      Edit
-                                    </Button>
-                                    <Button
-                                      variant="warning"
-                                      size="small"
-                                      icon={PackageMinus}
-                                      onClick={() => handleOpenPullOutModal(item)}
-                                      disabled={item.quantity === 0}
-                                    >
-                                      Pull Out
-                                    </Button>
-                                  </>
-                                )}
-                                {hasPermission("inventory", "delete") && (
-                                  <Button
-                                    variant="danger"
-                                    size="small"
-                                    icon={Trash2}
-                                    onClick={() => handleDeleteInventory(item._id)}
-                                    loading={deletingId === item._id}
-                                  >
-                                    Delete
-                                  </Button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-
-                      {filteredItems.length === 0 && !loading && (
+                      {flatRows.length === 0 ? (
                         <tr>
                           <td colSpan="5" className="px-6 py-12 text-center">
                             <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -625,12 +559,87 @@ export default function InventoryPage() {
                               {searchTerm ? "No items match your search" : "No inventory items yet"}
                             </p>
                             <p className="text-gray-400 text-sm mt-1">
-                              {searchTerm
-                                ? "Try a different search term"
-                                : "Add your first item to get started"}
+                              {searchTerm ? "Try a different search term" : "Add your first item to get started"}
                             </p>
                           </td>
                         </tr>
+                      ) : (
+                        flatRows.map(({ item, product, isFirst }) => {
+                          const isLowStock = Number(item.quantity) <= LOW_STOCK_THRESHOLD;
+                          const expStatus = getExpirationStatus(item.expirationDate);
+                          const daysLabel = getDaysLabel(item.expirationDate);
+                          const expStyles = {
+                            expired: "bg-red-100 text-red-800",
+                            warning: "bg-yellow-100 text-yellow-800",
+                            normal: "bg-green-100 text-green-800",
+                          };
+
+                          return (
+                            <tr
+                              key={item._id}
+                              className={`hover:bg-gray-50 transition-colors ${isFirst ? "border-t-2 border-gray-200" : ""}`}
+                            >
+                              {/* Name — only on first batch of each product */}
+                              <td className="px-6 py-4">
+                                {isFirst ? (
+                                  <span className="font-medium text-gray-900">{product.name}</span>
+                                ) : (
+                                  <span className="pl-3 text-gray-300 text-sm select-none">└</span>
+                                )}
+                              </td>
+                              {/* Price — only on first batch */}
+                              <td className="px-6 py-4 text-gray-600">
+                                {isFirst ? `₱${product.price?.toLocaleString()}` : ""}
+                              </td>
+                              <td className="px-6 py-4">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
+                                    isLowStock ? "bg-warning-100 text-warning-800" : "bg-success-100 text-success-800"
+                                  }`}
+                                >
+                                  {item.quantity}
+                                  {isLowStock && <AlertCircle className="w-3 h-3 ml-1" />}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-sm font-medium ${expStyles[expStatus]}`}>
+                                  {formatDate(item.expirationDate)}
+                                  {daysLabel && <span className="text-xs opacity-75">({daysLabel})</span>}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-center">
+                                <div className="flex items-center justify-center gap-2 flex-wrap">
+                                  {hasPermission("sales", "add") && (
+                                    <Button variant="success" size="small" icon={ShoppingCart}
+                                      onClick={() => handleOpenSellModal(item)}
+                                      disabled={expStatus === "expired"}>
+                                      Sell
+                                    </Button>
+                                  )}
+                                  {hasPermission("inventory", "edit") && (
+                                    <>
+                                      <Button variant="primary" size="small" icon={Pencil}
+                                        onClick={() => handleOpenEditModal(item)}>
+                                        Edit
+                                      </Button>
+                                      <Button variant="warning" size="small" icon={PackageMinus}
+                                        onClick={() => handleOpenPullOutModal(item)}>
+                                        Pull Out
+                                      </Button>
+                                    </>
+                                  )}
+                                  {hasPermission("inventory", "delete") && (
+                                    <Button variant="danger" size="small" icon={Trash2}
+                                      onClick={() => handleDeleteInventory(item._id)}
+                                      loading={deletingId === item._id}>
+                                      Delete
+                                    </Button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -755,7 +764,7 @@ export default function InventoryPage() {
       </main>
 
       {/* ── ADD ITEM MODAL ── */}
-      <Modal isOpen={isModalOpen} onClose={handleCloseModal} title="Add New Item">
+      <Modal isOpen={isModalOpen} onClose={handleCloseModal} title="Add Inventory Batch">
         <form onSubmit={handleAddItem} className="space-y-4">
           {/* Product selector */}
           <div>
@@ -769,11 +778,18 @@ export default function InventoryPage() {
               <option value="">Select a product...</option>
               {products.map((p) => (
                 <option key={p._id} value={p._id}>
-                  {p.name}
+                  {p.name} — ₱{p.price?.toLocaleString()}
                 </option>
               ))}
             </select>
           </div>
+
+          {/* Price hint */}
+          {selectedProduct && (
+            <div className="bg-primary-50 border border-primary-100 rounded-lg px-3 py-2 text-sm text-primary-700">
+              Price: <strong>₱{selectedProduct.price?.toLocaleString()}</strong> — to change price, go to the Products page
+            </div>
+          )}
 
           {/* Inline new product creation */}
           {!isAddingNewProduct ? (
@@ -791,8 +807,20 @@ export default function InventoryPage() {
                 type="text"
                 placeholder="e.g., Pork Humba"
                 value={newProductName}
-                onChange={(e) => setNewProductName(e.target.value)}
+                onChange={(e) => { setNewProductName(e.target.value); setNewProductError(""); }}
               />
+              <Input
+                label="Price (₱)"
+                type="number"
+                placeholder="0.00"
+                value={newProductPrice}
+                onChange={(e) => { setNewProductPrice(e.target.value); setNewProductError(""); }}
+                min="0"
+                step="0.01"
+              />
+              {newProductError && (
+                <p className="text-xs text-red-600">{newProductError}</p>
+              )}
               <div className="flex gap-2">
                 <Button
                   type="button"
@@ -800,7 +828,7 @@ export default function InventoryPage() {
                   size="small"
                   onClick={handleCreateProduct}
                   loading={creatingProduct}
-                  disabled={!newProductName.trim()}
+                  disabled={!newProductName.trim() || newProductPrice === ""}
                 >
                   Create
                 </Button>
@@ -811,6 +839,8 @@ export default function InventoryPage() {
                   onClick={() => {
                     setIsAddingNewProduct(false);
                     setNewProductName("");
+                    setNewProductPrice("");
+                    setNewProductError("");
                   }}
                 >
                   Cancel
@@ -827,16 +857,6 @@ export default function InventoryPage() {
             onChange={(e) => setQuantity(e.target.value)}
             required
             min="0"
-          />
-          <Input
-            label="Price (₱)"
-            type="number"
-            placeholder="Enter price"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            required
-            min="0"
-            step="0.01"
           />
           <Input
             label="Expiration Date"
@@ -864,7 +884,7 @@ export default function InventoryPage() {
               <p className="font-medium text-gray-900">{selectedItem.product?.name}</p>
               <div className="flex justify-between text-sm text-gray-600 mt-2">
                 <span>Available: {selectedItem.quantity}</span>
-                <span>Price: ₱{selectedItem.price?.toLocaleString()}</span>
+                <span>Price: ₱{itemPrice?.toLocaleString()}</span>
               </div>
             </div>
             <Input
@@ -916,24 +936,17 @@ export default function InventoryPage() {
       </Modal>
 
       {/* ── EDIT ITEM MODAL ── */}
-      <Modal isOpen={isEditModalOpen} onClose={handleCloseEditModal} title="Edit Item">
+      <Modal isOpen={isEditModalOpen} onClose={handleCloseEditModal} title="Edit Batch">
         {editItem && (
           <form onSubmit={handleEditItem} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Product</label>
-              <select
-                value={editItem.productId || ""}
-                onChange={(e) => setEditItem({ ...editItem, productId: e.target.value })}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all bg-white text-gray-900"
-                required
-              >
-                <option value="">Select a product...</option>
-                {products.map((p) => (
-                  <option key={p._id} value={p._id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+            {/* Read-only product info */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-sm text-gray-500 mb-1">Product</p>
+              <p className="font-medium text-gray-900">{editItem.product?.name}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Price: <span className="text-primary-600 font-medium">₱{editItem.product?.price?.toLocaleString()}</span>
+                <span className="ml-2 text-xs text-gray-400">(edit in Products page)</span>
+              </p>
             </div>
             <Input
               label="Quantity"
@@ -943,16 +956,6 @@ export default function InventoryPage() {
               onChange={(e) => setEditItem({ ...editItem, quantity: e.target.value })}
               required
               min="0"
-            />
-            <Input
-              label="Price (₱)"
-              type="number"
-              placeholder="Enter price"
-              value={editItem.price}
-              onChange={(e) => setEditItem({ ...editItem, price: e.target.value })}
-              required
-              min="0"
-              step="0.01"
             />
             <Input
               label="Expiration Date"
@@ -1033,8 +1036,7 @@ export default function InventoryPage() {
               {addReplacement && (
                 <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
                   <div className="bg-primary-50 rounded-lg px-3 py-2 text-sm text-primary-700">
-                    Product & price will be copied from{" "}
-                    <strong>{pullOutItem.product?.name}</strong> (₱{pullOutItem.price?.toLocaleString()})
+                    Replacement batch will use <strong>{pullOutItem.product?.name}</strong> at ₱{pullOutItem.product?.price?.toLocaleString()}
                   </div>
                   <Input
                     label="New Quantity"

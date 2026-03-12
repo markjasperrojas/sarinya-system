@@ -6,12 +6,15 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    unit: {
-      type: String,
-      default: "",
+    price: {
+      type: Number,
+      required: true,
+      min: 0,
     },
   },
   { timestamps: true }
 );
+
+productSchema.index({ name: 1 }, { unique: true, collation: { locale: "en", strength: 2 } });
 
 module.exports = mongoose.model("Product", productSchema);
