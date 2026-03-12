@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import API from "../api";
 import { useAuth } from "../contexts/AuthContext";
 import Button from "../components/Button";
@@ -17,11 +18,12 @@ import {
 } from "lucide-react";
 
 export default function SalesPage() {
+  const location = useLocation();
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
   const [search, setSearch] = useState("");
-  const [timeRange, setTimeRange] = useState("daily");
+  const [timeRange, setTimeRange] = useState(location.state?.timeRange ?? "daily");
   const [selectedDate, setSelectedDate] = useState("");
   const [viewMode, setViewMode] = useState("transactions"); // "transactions" | "products"
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });

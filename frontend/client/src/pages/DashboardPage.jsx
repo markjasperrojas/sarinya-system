@@ -324,7 +324,7 @@ export default function DashboardPage() {
             icon={Banknote}
             colorScheme="success"
             prefix="₱"
-            onClick={() => navigate("/sales")}
+            onClick={() => navigate("/sales", { state: { timeRange: "monthly" } })}
           />
         </div>
 
