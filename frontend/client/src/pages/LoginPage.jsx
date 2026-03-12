@@ -12,18 +12,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const { login, user, isAdmin } = useAuth();
+  const { login, user } = useAuth();
 
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      if (isAdmin()) {
-        navigate("/admin");
-      } else {
-        navigate("/dashboard");
-      }
+      navigate("/dashboard");
     }
-  }, [user, isAdmin, navigate]);
+  }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,12 +31,7 @@ export default function LoginPage() {
       const { token, user: userData } = res.data;
       login(userData, token);
 
-      // Redirect based on role
-      if (userData.role === "admin") {
-        navigate("/admin");
-      } else {
-        navigate("/dashboard");
-      }
+      navigate("/dashboard");
     } catch (err) {
       console.error("Login error:", err);
       const msg =
