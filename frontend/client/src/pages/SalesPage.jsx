@@ -273,9 +273,6 @@ export default function SalesPage() {
                     <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
                       Date
                     </th>
-                    <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                      Actions
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -293,28 +290,20 @@ export default function SalesPage() {
                       <td className="px-6 py-4 text-gray-500 text-sm">
                         <div className="flex items-center gap-1.5">
                           <Calendar className="w-4 h-4" />
-                          {new Date(sale.date).toLocaleDateString()}
+                          {(() => {
+                            const d = new Date(sale.date);
+                            const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+                            const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+                            return `${date} · ${time}`;
+                          })()}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        {hasPermission("sales", "delete") && (
-                          <Button
-                            variant="danger"
-                            size="small"
-                            icon={Trash2}
-                            onClick={() => handleDeleteSale(sale._id)}
-                            loading={deletingId === sale._id}
-                          >
-                            Delete
-                          </Button>
-                        )}
                       </td>
                     </tr>
                   ))}
 
                   {sales.length === 0 && (
                     <tr>
-                      <td colSpan="5" className="px-6 py-12 text-center">
+                      <td colSpan="4" className="px-6 py-12 text-center">
                         <ShoppingCart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                         <p className="text-gray-500 font-medium">No sales recorded yet</p>
                         <p className="text-gray-400 text-sm mt-1">
