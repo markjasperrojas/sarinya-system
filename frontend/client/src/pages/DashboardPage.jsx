@@ -184,7 +184,6 @@ export default function DashboardPage() {
   const [availableYears, setAvailableYears] = useState([CURRENT_YEAR]);
   const [expiredCount, setExpiredCount] = useState(0);
   const [expiringSoonCount, setExpiringSoonCount] = useState(0);
-  const [expiringItems, setExpiringItems] = useState([]);
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -258,7 +257,6 @@ export default function DashboardPage() {
 
       setExpiredCount(expiring.filter((it) => it.diffDays < 0).length);
       setExpiringSoonCount(expiring.filter((it) => it.diffDays >= 0).length);
-      setExpiringItems(expiring);
     } catch (err) {
       console.error("Dashboard fetch error:", err);
     } finally {
@@ -388,82 +386,6 @@ export default function DashboardPage() {
           />
         )}
 
-        {/* Expiring Items Table */}
-        <div className="bg-white rounded-2xl shadow-card p-6 mt-8 animate-fade-in">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-700 rounded-xl flex items-center justify-center">
-              <CalendarX className="w-5 h-5 text-white" />
-            </div>
-            <h2 className="text-lg font-bold text-gray-900">Expiring Items</h2>
-          </div>
-
-          {expiringItems.length === 0 ? (
-            <div className="flex items-center gap-2 text-green-600 bg-green-50 rounded-xl px-4 py-3">
-              <CalendarClock className="w-5 h-5" />
-              <span className="text-sm font-medium">
-                All items are within expiration date.
-              </span>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left py-2 px-3 font-semibold text-gray-600">
-                      Name
-                    </th>
-                    <th className="text-left py-2 px-3 font-semibold text-gray-600">
-                      Qty
-                    </th>
-                    <th className="text-left py-2 px-3 font-semibold text-gray-600">
-                      Expiration Date
-                    </th>
-                    <th className="text-left py-2 px-3 font-semibold text-gray-600">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {expiringItems.map((item) => (
-                    <tr
-                      key={item._id}
-                      className="border-b border-gray-50 hover:bg-gray-50"
-                    >
-                      <td className="py-2 px-3 font-medium text-gray-900">
-                        {item.name}
-                      </td>
-                      <td className="py-2 px-3 text-gray-700">
-                        {item.quantity}
-                      </td>
-                      <td className="py-2 px-3 text-gray-700">
-                        {new Date(item.expirationDate).toLocaleDateString(
-                          "en-US",
-                          {
-                            month: "short",
-                            day: "2-digit",
-                            year: "numeric",
-                          },
-                        )}
-                      </td>
-                      <td className="py-2 px-3">
-                        {item.diffDays < 0 ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
-                            Expired
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">
-                            Expiring Soon ({item.diffDays} day
-                            {item.diffDays !== 1 ? "s" : ""})
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
       </main>
     </>
   );
