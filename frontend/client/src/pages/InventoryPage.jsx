@@ -21,6 +21,9 @@ import {
   Search,
   ShoppingCart,
   Pencil,
+  ArrowUpDown,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 
 export default function InventoryPage() {
@@ -45,6 +48,8 @@ export default function InventoryPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [editing, setEditing] = useState(false);
+
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
 
   const { hasPermission } = useAuth();
 
@@ -221,9 +226,35 @@ export default function InventoryPage() {
     return "normal";
   };
 
-  const filteredItems = items.filter((item) =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const handleSort = (key) => {
+    setSortConfig((prev) =>
+      prev.key === key
+        ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
+        : { key, direction: "asc" }
+    );
+  };
+
+  const SortIcon = ({ col }) => {
+    if (sortConfig.key !== col) return <ArrowUpDown className="w-3.5 h-3.5 ml-1 text-gray-400" />;
+    return sortConfig.direction === "asc"
+      ? <ChevronUp className="w-3.5 h-3.5 ml-1 text-primary-500" />
+      : <ChevronDown className="w-3.5 h-3.5 ml-1 text-primary-500" />;
+  };
+
+  const filteredItems = [...items]
+    .filter((item) => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => {
+      if (!sortConfig.key) return 0;
+      let aVal = a[sortConfig.key];
+      let bVal = b[sortConfig.key];
+      if (sortConfig.key === "expirationDate") {
+        aVal = new Date(aVal);
+        bVal = new Date(bVal);
+      }
+      if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
 
   return (
     <>
@@ -284,17 +315,17 @@ export default function InventoryPage() {
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                      Item Name
+                    <th onClick={() => handleSort("name")} className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100">
+                      <span className="flex items-center">Item Name <SortIcon col="name" /></span>
                     </th>
-                    <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                      Quantity
+                    <th onClick={() => handleSort("quantity")} className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100">
+                      <span className="flex items-center">Quantity <SortIcon col="quantity" /></span>
                     </th>
-                    <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                      Price
+                    <th onClick={() => handleSort("price")} className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100">
+                      <span className="flex items-center">Price <SortIcon col="price" /></span>
                     </th>
-                    <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                      Expiration Date
+                    <th onClick={() => handleSort("expirationDate")} className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100">
+                      <span className="flex items-center">Expiration Date <SortIcon col="expirationDate" /></span>
                     </th>
                     <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
                       Actions
