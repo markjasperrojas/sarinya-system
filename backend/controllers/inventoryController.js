@@ -1,4 +1,5 @@
 const Inventory = require("../models/Inventory");
+const Product = require("../models/Product");
 const Sale = require("../models/Sale");
 const PullOut = require("../models/PullOut");
 const logActivity = require("../utils/activityLogger");
@@ -6,16 +7,20 @@ const logActivity = require("../utils/activityLogger");
 // CREATE
 exports.addItem = async (req, res) => {
   try {
-    const { name, quantity, price, expirationDate } = req.body;
+    const { productId, quantity, price, expirationDate } = req.body;
 
-    const item = new Inventory({ name, quantity, price, expirationDate });
+    const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ error: "Product not found" });
+
+    const item = new Inventory({ product: productId, quantity, price, expirationDate });
     await item.save();
+    await item.populate("product", "name unit");
 
     logActivity({
       userId: req.user.id,
       action: "add",
       module: "inventory",
-      description: `Added inventory item '${name}'`,
+      description: `Added inventory batch for '${product.name}'`,
       targetId: item._id,
     });
 
@@ -28,7 +33,9 @@ exports.addItem = async (req, res) => {
 // READ ALL (active items only)
 exports.getItems = async (req, res) => {
   try {
-    const items = await Inventory.find({ status: { $ne: "pulled_out" } }).sort({ updatedAt: -1 });
+    const items = await Inventory.find({ status: { $ne: "pulled_out" } })
+      .populate("product", "name unit")
+      .sort({ updatedAt: -1 });
     res.json(items);
   } catch (error) {
     res.status(500).json({ error: "Get items failed" });
@@ -39,19 +46,21 @@ exports.getItems = async (req, res) => {
 exports.updateItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, quantity, price, expirationDate } = req.body;
+    const { productId, quantity, price, expirationDate } = req.body;
 
-    const updatedItem = await Inventory.findByIdAndUpdate(
-      id,
-      { name, quantity, price, expirationDate, updatedAt: Date.now() },
-      { new: true }
+    const updateData = { quantity, price, expirationDate, updatedAt: Date.now() };
+    if (productId) updateData.product = productId;
+
+    const updatedItem = await Inventory.findByIdAndUpdate(id, updateData, { new: true }).populate(
+      "product",
+      "name unit"
     );
 
     logActivity({
       userId: req.user.id,
       action: "edit",
       module: "inventory",
-      description: `Updated inventory item '${updatedItem.name}'`,
+      description: `Updated inventory batch for '${updatedItem.product.name}'`,
       targetId: updatedItem._id,
     });
 
@@ -66,10 +75,8 @@ exports.deleteItem = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const item = await Inventory.findById(id);
-    if (!item) {
-      return res.status(404).json({ error: "Item not found" });
-    }
+    const item = await Inventory.findById(id).populate("product", "name");
+    if (!item) return res.status(404).json({ error: "Item not found" });
 
     await Inventory.findByIdAndDelete(id);
 
@@ -77,7 +84,7 @@ exports.deleteItem = async (req, res) => {
       userId: req.user.id,
       action: "delete",
       module: "inventory",
-      description: `Deleted inventory item '${item.name}'`,
+      description: `Deleted inventory batch for '${item.product.name}'`,
       targetId: item._id,
     });
 
@@ -93,30 +100,21 @@ exports.sellItem = async (req, res) => {
     const { id } = req.params;
     const { quantity } = req.body;
 
-    const item = await Inventory.findById(id);
+    const item = await Inventory.findById(id).populate("product", "name");
 
-    if (!item) {
-      return res.status(404).json({ error: "Item not found" });
-    }
+    if (!item) return res.status(404).json({ error: "Item not found" });
+    if (quantity <= 0) return res.status(400).json({ error: "Quantity must be greater than 0" });
+    if (quantity > item.quantity) return res.status(400).json({ error: "Not enough stock available" });
 
-    if (quantity <= 0) {
-      return res.status(400).json({ error: "Quantity must be greater than 0" });
-    }
-
-    if (quantity > item.quantity) {
-      return res.status(400).json({ error: "Not enough stock available" });
-    }
-
-    // Create sale record
     const sale = new Sale({
-      itemName: item.name,
+      itemName: item.product.name,
+      product: item.product._id,
       inventoryItemId: item._id,
       quantity,
       price: item.price,
     });
     await sale.save();
 
-    // Decrease inventory quantity
     item.quantity -= quantity;
     item.updatedAt = Date.now();
     await item.save();
@@ -125,7 +123,7 @@ exports.sellItem = async (req, res) => {
       userId: req.user.id,
       action: "sell",
       module: "inventory",
-      description: `Sold ${quantity} of '${item.name}' for ₱${sale.total}`,
+      description: `Sold ${quantity} of '${item.product.name}' for ₱${sale.total}`,
       targetId: item._id,
     });
 
@@ -139,30 +137,16 @@ exports.sellItem = async (req, res) => {
 exports.pullOutItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      quantityPulledOut,
-      reason,
-      addReplacement,
-      replacementQuantity,
-      replacementExpirationDate,
-    } = req.body;
+    const { quantityPulledOut, reason, addReplacement, replacementQuantity, replacementExpirationDate } = req.body;
 
-    const item = await Inventory.findById(id);
-    if (!item) {
-      return res.status(404).json({ error: "Item not found" });
-    }
+    const item = await Inventory.findById(id).populate("product", "name");
+    if (!item) return res.status(404).json({ error: "Item not found" });
 
-    if (quantityPulledOut <= 0) {
-      return res.status(400).json({ error: "Quantity must be greater than 0" });
-    }
-
-    if (quantityPulledOut > item.quantity) {
-      return res.status(400).json({ error: "Not enough stock available" });
-    }
+    if (quantityPulledOut <= 0) return res.status(400).json({ error: "Quantity must be greater than 0" });
+    if (quantityPulledOut > item.quantity) return res.status(400).json({ error: "Not enough stock available" });
 
     const isFullPullOut = quantityPulledOut === item.quantity;
 
-    // Update the original item
     if (isFullPullOut) {
       item.status = "pulled_out";
       item.pullOutReason = reason;
@@ -172,11 +156,10 @@ exports.pullOutItem = async (req, res) => {
     }
     item.updatedAt = Date.now();
 
-    // Create replacement item if requested
     let replacementItem = null;
     if (addReplacement) {
       replacementItem = new Inventory({
-        name: item.name,
+        product: item.product._id,
         quantity: Number(replacementQuantity),
         price: item.price,
         expirationDate: replacementExpirationDate,
@@ -192,10 +175,10 @@ exports.pullOutItem = async (req, res) => {
 
     await item.save();
 
-    // Create PullOut record
     const pullOut = new PullOut({
       inventoryItemId: item._id,
-      itemName: item.name,
+      product: item.product._id,
+      itemName: item.product.name,
       quantityPulledOut: Number(quantityPulledOut),
       reason,
       pulledOutBy: req.user.id,
@@ -203,15 +186,13 @@ exports.pullOutItem = async (req, res) => {
     });
     await pullOut.save();
 
-    const replacementNote = replacementItem
-      ? ` and replaced with ${replacementQuantity} new units`
-      : "";
+    const replacementNote = replacementItem ? ` and replaced with ${replacementQuantity} new units` : "";
 
     logActivity({
       userId: req.user.id,
       action: "pull_out",
       module: "inventory",
-      description: `Pulled out ${quantityPulledOut} of '${item.name}' (${reason})${replacementNote}`,
+      description: `Pulled out ${quantityPulledOut} of '${item.product.name}' (${reason})${replacementNote}`,
       targetId: item._id,
     });
 
@@ -226,7 +207,11 @@ exports.getPullOuts = async (req, res) => {
   try {
     const pullOuts = await PullOut.find()
       .populate("pulledOutBy", "username")
-      .populate("replacedByItemId", "name quantity expirationDate")
+      .populate({
+        path: "replacedByItemId",
+        select: "quantity expirationDate product",
+        populate: { path: "product", select: "name" },
+      })
       .sort({ date: -1 });
 
     res.json(pullOuts);

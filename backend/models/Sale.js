@@ -6,6 +6,10 @@ const saleSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    product: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+    },
     inventoryItemId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Inventory",

@@ -26,7 +26,7 @@ exports.addSale = async (req, res) => {
 // READ ALL SALES
 exports.getSales = async (req, res) => {
   try {
-    const { search, timeRange, date, page = 1, limit = 20 } = req.query;
+    const { search, timeRange, date, page = 1, limit = 20, grouped } = req.query;
     let query = {};
 
     // Search filter
@@ -75,6 +75,23 @@ exports.getSales = async (req, res) => {
       if (startDate) {
         query.date = { $gte: startDate };
       }
+    }
+
+    // Grouped by product view
+    if (grouped === "true") {
+      const result = await Sale.aggregate([
+        { $match: query },
+        {
+          $group: {
+            _id: "$product",
+            itemName: { $first: "$itemName" },
+            quantity: { $sum: "$quantity" },
+            total: { $sum: { $multiply: ["$quantity", "$price"] } },
+          },
+        },
+        { $sort: { total: -1 } },
+      ]);
+      return res.json({ sales: result, pagination: null });
     }
 
     const pageNum = parseInt(page);

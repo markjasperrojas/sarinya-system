@@ -7,6 +7,7 @@ import {
   updateInventoryItem,
   pullOutInventoryItem,
 } from "../services/inventoryService";
+import { getProducts, createProduct } from "../services/productService";
 import API from "../api";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -63,9 +64,15 @@ export default function InventoryPage() {
   const [pullOutsLoading, setPullOutsLoading] = useState(false);
   const [discrepancySearch, setDiscrepancySearch] = useState("");
 
+  // Products state (shared across modals)
+  const [products, setProducts] = useState([]);
+
   // Add modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [name, setName] = useState("");
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [isAddingNewProduct, setIsAddingNewProduct] = useState(false);
+  const [newProductName, setNewProductName] = useState("");
+  const [creatingProduct, setCreatingProduct] = useState(false);
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
   const [expirationDate, setExpirationDate] = useState("");
@@ -97,6 +104,7 @@ export default function InventoryPage() {
 
   useEffect(() => {
     loadItems();
+    loadProducts();
   }, []);
 
   useEffect(() => {
@@ -126,6 +134,15 @@ export default function InventoryPage() {
     }
   };
 
+  const loadProducts = async () => {
+    try {
+      const data = await getProducts();
+      setProducts(data);
+    } catch (error) {
+      console.error("Failed to load products:", error);
+    }
+  };
+
   const loadPullOuts = async () => {
     setPullOutsLoading(true);
     try {
@@ -139,13 +156,35 @@ export default function InventoryPage() {
   };
 
   // --- Add Item ---
+  const handleCreateProduct = async () => {
+    if (!newProductName.trim()) return;
+    setCreatingProduct(true);
+    try {
+      const data = await createProduct({ name: newProductName.trim() });
+      const newProduct = data.product;
+      setProducts((prev) => [...prev, newProduct].sort((a, b) => a.name.localeCompare(b.name)));
+      setSelectedProductId(newProduct._id);
+      setIsAddingNewProduct(false);
+      setNewProductName("");
+    } catch (error) {
+      alert("Failed to create product");
+    } finally {
+      setCreatingProduct(false);
+    }
+  };
+
   const handleAddItem = async (e) => {
     e.preventDefault();
-    if (!name || !quantity || !price || !expirationDate) return;
+    if (!selectedProductId || !quantity || !price || !expirationDate) return;
     setSubmitting(true);
     try {
-      await addInventoryItem({ name, quantity, price, expirationDate });
-      setName(""); setQuantity(""); setPrice(""); setExpirationDate("");
+      await addInventoryItem({ productId: selectedProductId, quantity, price, expirationDate });
+      setSelectedProductId("");
+      setIsAddingNewProduct(false);
+      setNewProductName("");
+      setQuantity("");
+      setPrice("");
+      setExpirationDate("");
       setIsModalOpen(false);
       loadItems();
     } catch (error) {
@@ -157,7 +196,12 @@ export default function InventoryPage() {
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setName(""); setQuantity(""); setPrice(""); setExpirationDate("");
+    setSelectedProductId("");
+    setIsAddingNewProduct(false);
+    setNewProductName("");
+    setQuantity("");
+    setPrice("");
+    setExpirationDate("");
   };
 
   // --- Delete ---
@@ -202,17 +246,14 @@ export default function InventoryPage() {
     }
   };
 
-  const sellPreviewTotal = selectedItem
-    ? Number(sellQuantity || 0) * selectedItem.price
-    : 0;
+  const sellPreviewTotal = selectedItem ? Number(sellQuantity || 0) * selectedItem.price : 0;
 
   // --- Edit ---
   const handleOpenEditModal = (item) => {
     setEditItem({
       ...item,
-      expirationDate: item.expirationDate
-        ? new Date(item.expirationDate).toISOString().split("T")[0]
-        : "",
+      productId: item.product?._id,
+      expirationDate: item.expirationDate ? new Date(item.expirationDate).toISOString().split("T")[0] : "",
     });
     setIsEditModalOpen(true);
   };
@@ -224,11 +265,11 @@ export default function InventoryPage() {
 
   const handleEditItem = async (e) => {
     e.preventDefault();
-    if (!editItem.name || !editItem.quantity || !editItem.price || !editItem.expirationDate) return;
+    if (!editItem.productId || !editItem.quantity || !editItem.price || !editItem.expirationDate) return;
     setEditing(true);
     try {
       await updateInventoryItem(editItem._id, {
-        name: editItem.name,
+        productId: editItem.productId,
         quantity: Number(editItem.quantity),
         price: Number(editItem.price),
         expirationDate: editItem.expirationDate,
@@ -279,7 +320,6 @@ export default function InventoryPage() {
       });
       handleClosePullOutModal();
       loadItems();
-      // Refresh pull-outs if discrepancies tab was already loaded
       if (pullOuts.length > 0) loadPullOuts();
     } catch (error) {
       alert(error.response?.data?.error || "Failed to pull out item");
@@ -319,17 +359,19 @@ export default function InventoryPage() {
 
   const SortIcon = ({ col }) => {
     if (sortConfig.key !== col) return <ArrowUpDown className="w-3.5 h-3.5 ml-1 text-gray-400" />;
-    return sortConfig.direction === "asc"
-      ? <ChevronUp className="w-3.5 h-3.5 ml-1 text-primary-500" />
-      : <ChevronDown className="w-3.5 h-3.5 ml-1 text-primary-500" />;
+    return sortConfig.direction === "asc" ? (
+      <ChevronUp className="w-3.5 h-3.5 ml-1 text-primary-500" />
+    ) : (
+      <ChevronDown className="w-3.5 h-3.5 ml-1 text-primary-500" />
+    );
   };
 
   const filteredItems = [...items]
-    .filter((item) => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter((item) => item.product?.name.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort((a, b) => {
       if (!sortConfig.key) return 0;
-      let aVal = a[sortConfig.key];
-      let bVal = b[sortConfig.key];
+      let aVal = sortConfig.key === "name" ? a.product?.name : a[sortConfig.key];
+      let bVal = sortConfig.key === "name" ? b.product?.name : b[sortConfig.key];
       if (sortConfig.key === "expirationDate") {
         aVal = new Date(aVal);
         bVal = new Date(bVal);
@@ -361,18 +403,12 @@ export default function InventoryPage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Inventory</h1>
-                <p className="text-xs text-gray-500 hidden sm:block">
-                  {items.length} active items
-                </p>
+                <p className="text-xs text-gray-500 hidden sm:block">{items.length} active items</p>
               </div>
             </div>
 
             {activeTab === "stock" && hasPermission("inventory", "add") && (
-              <Button
-                variant="success"
-                icon={Plus}
-                onClick={() => setIsModalOpen(true)}
-              >
+              <Button variant="success" icon={Plus} onClick={() => setIsModalOpen(true)}>
                 <span className="hidden sm:inline">Add Item</span>
                 <span className="sm:hidden">Add</span>
               </Button>
@@ -383,22 +419,21 @@ export default function InventoryPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-8">
-
         {/* Tabs */}
         <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
           <button
             onClick={() => setActiveTab("stock")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === "stock"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
+              activeTab === "stock" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
             }`}
           >
             <Package className="w-4 h-4" />
             Active Stock
-            <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
-              activeTab === "stock" ? "bg-primary-100 text-primary-700" : "bg-gray-200 text-gray-600"
-            }`}>
+            <span
+              className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
+                activeTab === "stock" ? "bg-primary-100 text-primary-700" : "bg-gray-200 text-gray-600"
+              }`}
+            >
               {items.length}
             </span>
           </button>
@@ -413,9 +448,13 @@ export default function InventoryPage() {
             <TriangleAlert className="w-4 h-4" />
             Discrepancies
             {pullOuts.length > 0 && (
-              <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
-                activeTab === "discrepancies" ? "bg-red-100 text-red-700" : "bg-gray-200 text-gray-600"
-              }`}>
+              <span
+                className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
+                  activeTab === "discrepancies"
+                    ? "bg-red-100 text-red-700"
+                    : "bg-gray-200 text-gray-600"
+                }`}
+              >
                 {pullOuts.length}
               </span>
             )}
@@ -448,17 +487,37 @@ export default function InventoryPage() {
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gray-50 border-b border-gray-200">
-                        <th onClick={() => handleSort("name")} className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100">
-                          <span className="flex items-center">Item Name <SortIcon col="name" /></span>
+                        <th
+                          onClick={() => handleSort("name")}
+                          className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100"
+                        >
+                          <span className="flex items-center">
+                            Item Name <SortIcon col="name" />
+                          </span>
                         </th>
-                        <th onClick={() => handleSort("quantity")} className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100">
-                          <span className="flex items-center">Quantity <SortIcon col="quantity" /></span>
+                        <th
+                          onClick={() => handleSort("quantity")}
+                          className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100"
+                        >
+                          <span className="flex items-center">
+                            Quantity <SortIcon col="quantity" />
+                          </span>
                         </th>
-                        <th onClick={() => handleSort("price")} className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100">
-                          <span className="flex items-center">Price <SortIcon col="price" /></span>
+                        <th
+                          onClick={() => handleSort("price")}
+                          className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100"
+                        >
+                          <span className="flex items-center">
+                            Price <SortIcon col="price" />
+                          </span>
                         </th>
-                        <th onClick={() => handleSort("expirationDate")} className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100">
-                          <span className="flex items-center">Expiration Date <SortIcon col="expirationDate" /></span>
+                        <th
+                          onClick={() => handleSort("expirationDate")}
+                          className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100"
+                        >
+                          <span className="flex items-center">
+                            Expiration Date <SortIcon col="expirationDate" />
+                          </span>
                         </th>
                         <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
                           Actions
@@ -472,21 +531,27 @@ export default function InventoryPage() {
                           <tr key={item._id} className="hover:bg-gray-50 transition-colors">
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
-                                <div className={`w-2 h-2 rounded-full ${isLowStock ? "bg-warning-500" : "bg-success-500"}`} />
-                                <span className="font-medium text-gray-900">{item.name}</span>
+                                <div
+                                  className={`w-2 h-2 rounded-full ${
+                                    isLowStock ? "bg-warning-500" : "bg-success-500"
+                                  }`}
+                                />
+                                <span className="font-medium text-gray-900">{item.product?.name}</span>
                               </div>
                             </td>
                             <td className="px-6 py-4">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
-                                isLowStock ? "bg-warning-100 text-warning-800" : "bg-success-100 text-success-800"
-                              }`}>
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
+                                  isLowStock
+                                    ? "bg-warning-100 text-warning-800"
+                                    : "bg-success-100 text-success-800"
+                                }`}
+                              >
                                 {item.quantity}
                                 {isLowStock && <AlertCircle className="w-3 h-3 ml-1" />}
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-gray-600">
-                              ₱{item.price?.toLocaleString() || 0}
-                            </td>
+                            <td className="px-6 py-4 text-gray-600">₱{item.price?.toLocaleString() || 0}</td>
                             <td className="px-6 py-4">
                               {(() => {
                                 const status = getExpirationStatus(item.expirationDate);
@@ -501,7 +566,9 @@ export default function InventoryPage() {
                                   normal: "",
                                 };
                                 return (
-                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${statusStyles[status]}`}>
+                                  <span
+                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${statusStyles[status]}`}
+                                  >
                                     {formatDate(item.expirationDate)}
                                     {statusLabels[status] && (
                                       <span className="ml-1 text-xs">({statusLabels[status]})</span>
@@ -569,7 +636,9 @@ export default function InventoryPage() {
                               {searchTerm ? "No items match your search" : "No inventory items yet"}
                             </p>
                             <p className="text-gray-400 text-sm mt-1">
-                              {searchTerm ? "Try a different search term" : "Add your first item to get started"}
+                              {searchTerm
+                                ? "Try a different search term"
+                                : "Add your first item to get started"}
                             </p>
                           </td>
                         </tr>
@@ -608,12 +677,24 @@ export default function InventoryPage() {
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gray-50 border-b border-gray-200">
-                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">Item</th>
-                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">Qty Pulled</th>
-                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">Reason</th>
-                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">Date</th>
-                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">Pulled By</th>
-                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">Replacement</th>
+                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                          Item
+                        </th>
+                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                          Qty Pulled
+                        </th>
+                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                          Reason
+                        </th>
+                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                          Date
+                        </th>
+                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                          Pulled By
+                        </th>
+                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                          Replacement
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -631,15 +712,15 @@ export default function InventoryPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium capitalize ${
-                              REASON_STYLES[record.reason] || "bg-gray-100 text-gray-700"
-                            }`}>
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium capitalize ${
+                                REASON_STYLES[record.reason] || "bg-gray-100 text-gray-700"
+                              }`}
+                            >
                               {record.reason.replace("_", " ")}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-gray-600 text-sm">
-                            {formatDate(record.date)}
-                          </td>
+                          <td className="px-6 py-4 text-gray-600 text-sm">{formatDate(record.date)}</td>
                           <td className="px-6 py-4 text-gray-600 text-sm">
                             {record.pulledOutBy?.username || "—"}
                           </td>
@@ -647,9 +728,12 @@ export default function InventoryPage() {
                             {record.replacedByItemId ? (
                               <div className="flex items-center gap-1.5 text-sm text-success-700">
                                 <ArrowLeftRight className="w-3.5 h-3.5" />
-                                <span className="font-medium">{record.replacedByItemId.name}</span>
+                                <span className="font-medium">
+                                  {record.replacedByItemId.product?.name}
+                                </span>
                                 <span className="text-gray-500">
-                                  (×{record.replacedByItemId.quantity}, exp. {formatDate(record.replacedByItemId.expirationDate)})
+                                  (×{record.replacedByItemId.quantity}, exp.{" "}
+                                  {formatDate(record.replacedByItemId.expirationDate)})
                                 </span>
                               </div>
                             ) : (
@@ -664,11 +748,11 @@ export default function InventoryPage() {
                           <td colSpan="6" className="px-6 py-12 text-center">
                             <TriangleAlert className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                             <p className="text-gray-500 font-medium">
-                              {discrepancySearch ? "No records match your search" : "No discrepancies recorded"}
+                              {discrepancySearch
+                                ? "No records match your search"
+                                : "No discrepancies recorded"}
                             </p>
-                            <p className="text-gray-400 text-sm mt-1">
-                              Pull-out records will appear here
-                            </p>
+                            <p className="text-gray-400 text-sm mt-1">Pull-out records will appear here</p>
                           </td>
                         </tr>
                       )}
@@ -684,13 +768,101 @@ export default function InventoryPage() {
       {/* ── ADD ITEM MODAL ── */}
       <Modal isOpen={isModalOpen} onClose={handleCloseModal} title="Add New Item">
         <form onSubmit={handleAddItem} className="space-y-4">
-          <Input label="Item Name" type="text" placeholder="Enter item name" value={name} onChange={(e) => setName(e.target.value)} required />
-          <Input label="Quantity" type="number" placeholder="Enter quantity" value={quantity} onChange={(e) => setQuantity(e.target.value)} required min="0" />
-          <Input label="Price (₱)" type="number" placeholder="Enter price" value={price} onChange={(e) => setPrice(e.target.value)} required min="0" step="0.01" />
-          <Input label="Expiration Date" type="date" value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} required />
+          {/* Product selector */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Product</label>
+            <select
+              value={selectedProductId}
+              onChange={(e) => setSelectedProductId(e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all bg-white text-gray-900"
+              required
+            >
+              <option value="">Select a product...</option>
+              {products.map((p) => (
+                <option key={p._id} value={p._id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Inline new product creation */}
+          {!isAddingNewProduct ? (
+            <button
+              type="button"
+              onClick={() => setIsAddingNewProduct(true)}
+              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+            >
+              + Create new product
+            </button>
+          ) : (
+            <div className="border border-gray-200 rounded-lg p-3 space-y-2">
+              <Input
+                label="New Product Name"
+                type="text"
+                placeholder="e.g., Pork Humba"
+                value={newProductName}
+                onChange={(e) => setNewProductName(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="small"
+                  onClick={handleCreateProduct}
+                  loading={creatingProduct}
+                  disabled={!newProductName.trim()}
+                >
+                  Create
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="small"
+                  onClick={() => {
+                    setIsAddingNewProduct(false);
+                    setNewProductName("");
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <Input
+            label="Quantity"
+            type="number"
+            placeholder="Enter quantity"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            required
+            min="0"
+          />
+          <Input
+            label="Price (₱)"
+            type="number"
+            placeholder="Enter price"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            required
+            min="0"
+            step="0.01"
+          />
+          <Input
+            label="Expiration Date"
+            type="date"
+            value={expirationDate}
+            onChange={(e) => setExpirationDate(e.target.value)}
+            required
+          />
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={handleCloseModal} fullWidth>Cancel</Button>
-            <Button type="submit" variant="success" loading={submitting} fullWidth icon={Plus}>Add Item</Button>
+            <Button type="button" variant="outline" onClick={handleCloseModal} fullWidth>
+              Cancel
+            </Button>
+            <Button type="submit" variant="success" loading={submitting} fullWidth icon={Plus}>
+              Add Item
+            </Button>
           </div>
         </form>
       </Modal>
@@ -700,18 +872,29 @@ export default function InventoryPage() {
         {selectedItem && (
           <form onSubmit={handleSellItem} className="space-y-4">
             <div className="bg-gray-50 rounded-lg p-4">
-              <p className="font-medium text-gray-900">{selectedItem.name}</p>
+              <p className="font-medium text-gray-900">{selectedItem.product?.name}</p>
               <div className="flex justify-between text-sm text-gray-600 mt-2">
                 <span>Available: {selectedItem.quantity}</span>
                 <span>Price: ₱{selectedItem.price?.toLocaleString()}</span>
               </div>
             </div>
-            <Input label="Quantity to Sell" type="number" placeholder="Enter quantity" value={sellQuantity} onChange={(e) => setSellQuantity(e.target.value)} required min="1" max={selectedItem.quantity} />
+            <Input
+              label="Quantity to Sell"
+              type="number"
+              placeholder="Enter quantity"
+              value={sellQuantity}
+              onChange={(e) => setSellQuantity(e.target.value)}
+              required
+              min="1"
+              max={selectedItem.quantity}
+            />
             {sellQuantity && Number(sellQuantity) > 0 && (
               <div className="bg-success-50 border border-success-200 rounded-lg p-4 animate-fade-in">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-success-700">Total:</span>
-                  <span className="text-xl font-bold text-success-700">₱{sellPreviewTotal.toLocaleString()}</span>
+                  <span className="text-xl font-bold text-success-700">
+                    ₱{sellPreviewTotal.toLocaleString()}
+                  </span>
                 </div>
               </div>
             )}
@@ -721,8 +904,21 @@ export default function InventoryPage() {
               </div>
             )}
             <div className="flex gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={handleCloseSellModal} fullWidth>Cancel</Button>
-              <Button type="submit" variant="success" loading={selling} fullWidth icon={ShoppingCart} disabled={!sellQuantity || Number(sellQuantity) <= 0 || Number(sellQuantity) > selectedItem.quantity}>
+              <Button type="button" variant="outline" onClick={handleCloseSellModal} fullWidth>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="success"
+                loading={selling}
+                fullWidth
+                icon={ShoppingCart}
+                disabled={
+                  !sellQuantity ||
+                  Number(sellQuantity) <= 0 ||
+                  Number(sellQuantity) > selectedItem.quantity
+                }
+              >
                 Confirm Sale
               </Button>
             </div>
@@ -734,13 +930,55 @@ export default function InventoryPage() {
       <Modal isOpen={isEditModalOpen} onClose={handleCloseEditModal} title="Edit Item">
         {editItem && (
           <form onSubmit={handleEditItem} className="space-y-4">
-            <Input label="Item Name" type="text" placeholder="Enter item name" value={editItem.name} onChange={(e) => setEditItem({ ...editItem, name: e.target.value })} required />
-            <Input label="Quantity" type="number" placeholder="Enter quantity" value={editItem.quantity} onChange={(e) => setEditItem({ ...editItem, quantity: e.target.value })} required min="0" />
-            <Input label="Price (₱)" type="number" placeholder="Enter price" value={editItem.price} onChange={(e) => setEditItem({ ...editItem, price: e.target.value })} required min="0" step="0.01" />
-            <Input label="Expiration Date" type="date" value={editItem.expirationDate} onChange={(e) => setEditItem({ ...editItem, expirationDate: e.target.value })} required />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Product</label>
+              <select
+                value={editItem.productId || ""}
+                onChange={(e) => setEditItem({ ...editItem, productId: e.target.value })}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all bg-white text-gray-900"
+                required
+              >
+                <option value="">Select a product...</option>
+                {products.map((p) => (
+                  <option key={p._id} value={p._id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Input
+              label="Quantity"
+              type="number"
+              placeholder="Enter quantity"
+              value={editItem.quantity}
+              onChange={(e) => setEditItem({ ...editItem, quantity: e.target.value })}
+              required
+              min="0"
+            />
+            <Input
+              label="Price (₱)"
+              type="number"
+              placeholder="Enter price"
+              value={editItem.price}
+              onChange={(e) => setEditItem({ ...editItem, price: e.target.value })}
+              required
+              min="0"
+              step="0.01"
+            />
+            <Input
+              label="Expiration Date"
+              type="date"
+              value={editItem.expirationDate}
+              onChange={(e) => setEditItem({ ...editItem, expirationDate: e.target.value })}
+              required
+            />
             <div className="flex gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={handleCloseEditModal} fullWidth>Cancel</Button>
-              <Button type="submit" variant="primary" loading={editing} fullWidth icon={Pencil}>Save Changes</Button>
+              <Button type="button" variant="outline" onClick={handleCloseEditModal} fullWidth>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" loading={editing} fullWidth icon={Pencil}>
+                Save Changes
+              </Button>
             </div>
           </form>
         )}
@@ -752,7 +990,7 @@ export default function InventoryPage() {
           <form onSubmit={handlePullOut} className="space-y-4">
             {/* Item info */}
             <div className="bg-gray-50 rounded-lg p-4">
-              <p className="font-medium text-gray-900">{pullOutItem.name}</p>
+              <p className="font-medium text-gray-900">{pullOutItem.product?.name}</p>
               <div className="flex justify-between text-sm text-gray-600 mt-2">
                 <span>Current stock: {pullOutItem.quantity}</span>
                 <span>Expires: {formatDate(pullOutItem.expirationDate)}</span>
@@ -779,7 +1017,9 @@ export default function InventoryPage() {
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all bg-white text-gray-900"
               >
                 {PULL_OUT_REASONS.map((r) => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -795,15 +1035,17 @@ export default function InventoryPage() {
                 />
                 <div>
                   <span className="text-sm font-medium text-gray-900">Add replacement stock</span>
-                  <p className="text-xs text-gray-500 mt-0.5">Create a new entry with a fresh expiration date</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Create a new batch with a fresh expiration date
+                  </p>
                 </div>
               </label>
 
               {addReplacement && (
                 <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
-                  {/* Pre-filled read-only info */}
                   <div className="bg-primary-50 rounded-lg px-3 py-2 text-sm text-primary-700">
-                    Name & price will be copied from <strong>{pullOutItem.name}</strong> (₱{pullOutItem.price?.toLocaleString()})
+                    Product & price will be copied from{" "}
+                    <strong>{pullOutItem.product?.name}</strong> (₱{pullOutItem.price?.toLocaleString()})
                   </div>
                   <Input
                     label="New Quantity"
@@ -832,7 +1074,9 @@ export default function InventoryPage() {
             )}
 
             <div className="flex gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={handleClosePullOutModal} fullWidth>Cancel</Button>
+              <Button type="button" variant="outline" onClick={handleClosePullOutModal} fullWidth>
+                Cancel
+              </Button>
               <Button
                 type="submit"
                 variant="warning"
