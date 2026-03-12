@@ -1,0 +1,247 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "Sarinya — Complete Code Review",
+  "steps": [
+    {
+      "file": "backend/server.js",
+      "line": 1,
+      "description": "## Section: Backend — Express Server (Rails analogy: `config/application.rb` + `config/routes.rb`)\n\nThe backend is a Node.js **Express** app. If you know Rails, Express is the equivalent of Rack + a minimal Rails setup — no ORM built in, no conventions, just middleware and route handlers.\n\n- `dotenv` loads `.env` variables (like Rails `credentials.yml`)\n- `cors()` allows the React frontend to make requests from a different port\n- `express.json()` parses JSON request bodies (like `ActionDispatch::Request` parsing)\n- Each `app.use('/api/...')` mounts a route file — equivalent to `resources :inventory` in `routes.rb`\n\nThe backend listens on port 5000. The React frontend talks to it via `http://localhost:5000/api`."
+    },
+    {
+      "file": "backend/models/Inventory.js",
+      "line": 1,
+      "description": "## Section: Backend — MongoDB Models (Rails analogy: `app/models/`)\n\nThe backend uses **Mongoose** to define MongoDB schemas — equivalent to ActiveRecord models with explicit column definitions.\n\nRead the `Inventory` model to understand the data shape:\n- `name` — string, required\n- `quantity` — number (defaults to 0)\n- `price` — number\n- `expirationDate` — date\n- `isActive` — boolean flag for soft-deleting (pulled-out items become inactive)\n\nIn MongoDB, every document automatically gets an `_id` field (like Rails' `id`). You'll see `item._id` everywhere in the React frontend."
+    },
+    {
+      "file": "backend/routes/inventoryRoutes.js",
+      "line": 1,
+      "description": "## Backend Routes — Inventory (Rails analogy: `resources :inventory` in `routes.rb`)\n\nThis file maps HTTP verbs + paths to controller functions. Equivalent Rails routing:\n\n```\nGET  /inventory          → getInventoryItems   (index action)\nPOST /inventory/add      → addInventoryItem    (create action)\nPUT  /inventory/:id      → updateInventoryItem (update action)\nDELETE /inventory/:id    → deleteInventoryItem (destroy action)\nPOST /inventory/:id/sell → sellInventoryItem   (custom action)\nPOST /inventory/:id/pullout → pullOutItem      (custom action)\nGET  /inventory/pullouts → getPullOuts         (custom collection action)\n```\n\nNotice `authMiddleware` and `permissionMiddleware` are applied to routes that need protection — equivalent to `before_action :authenticate_user!, :require_permission` in Rails."
+    },
+    {
+      "file": "frontend/client/src/index.js",
+      "line": 1,
+      "description": "## Section: Frontend Entry Point\n\nThis is where the React app boots.\n\n1. **Line 9-12**: Before React even renders, it checks `localStorage` for a saved JWT token. If found, it calls `setAuthToken(token)` to configure axios. This means if you refresh the browser, you're still \"logged in\" — the token is restored before any component renders.\n\n2. **Line 14**: `ReactDOM.createRoot` finds the `<div id=\"root\">` in `public/index.html` and gives React ownership of it.\n\n3. **Line 15-18**: The entire app is rendered inside `<React.StrictMode>` — a development helper that runs some checks twice to detect side effects. It has no effect in production."
+    },
+    {
+      "file": "frontend/client/src/api.js",
+      "line": 1,
+      "description": "## Section: API Client — axios configuration\n\nThis module creates a single configured **axios** instance shared by the whole app.\n\n- `baseURL: 'http://localhost:5000/api'` — all requests are relative to this. So `API.get('/inventory')` hits `http://localhost:5000/api/inventory`.\n- The `ngrok-skip-browser-warning` header is for when the app is exposed via ngrok (a tunneling tool used for demos/testing on mobile).\n\n**`setAuthToken(token)`** — called after login. If `token` is truthy, sets `API.defaults.headers.common['Authorization']` to `Bearer <token>`, so every future request automatically includes it. If `null`, removes the header.\n\nThis is the single place where HTTP auth is configured. No other file needs to manually add auth headers."
+    },
+    {
+      "file": "frontend/client/src/App.js",
+      "line": 1,
+      "description": "## Section: App.js — Root Component and Router\n\nThe root component does two things: wraps the app in providers, and defines all routes.\n\n**Providers** (lines 15-16): `<AuthProvider>` and `<Router>` are \"wrapper\" components that provide context to all children. They don't render visible UI — they set up global infrastructure. If you forget to wrap a component in `<Router>`, any child that calls `useNavigate()` will crash.\n\n**Route structure**: Every protected page follows the same nesting pattern:\n```\n<ProtectedRoute [auth checks]>\n  <Layout [sidebar + nav]>\n    <PageComponent />\n  </Layout>\n</ProtectedRoute>\n```\n\nThe `/` route (LoginPage) has no `<Layout>` wrapper — the login page has its own full-screen layout."
+    },
+    {
+      "file": "frontend/client/src/App.js",
+      "line": 30,
+      "description": "## Route-level permission guards\n\nSome routes pass a `requiredPermission` prop to `<ProtectedRoute>`:\n```jsx\n<ProtectedRoute requiredPermission={{ module: 'inventory', action: 'view' }}>\n```\n\nOthers only require a role:\n```jsx\n<ProtectedRoute requiredRole=\"admin\">\n```\n\nThis means route protection is declared at the router level, not inside the page component itself. If a staff user manually types `/admin` in the browser, they're redirected to `/dashboard` — the page never renders.\n\nAdmins get `/admin`, `/admin/users`, and `/admin/activity-logs`. Staff get `/dashboard`, and optionally `/inventory` and `/sales` depending on their permissions."
+    },
+    {
+      "file": "frontend/client/src/contexts/AuthContext.jsx",
+      "line": 1,
+      "description": "## Section: AuthContext — Global Auth State\n\nThis file creates and provides the authentication context — the equivalent of `ApplicationController`'s `current_user`, `authenticate_user!`, and `can?` permission checks all in one place.\n\nThe file exports:\n1. `AuthProvider` — the wrapper component that holds auth state\n2. `useAuth` — a custom hook that any component calls to access auth data\n\n`createContext(null)` creates an empty context container. The `null` default is intentional — if `useAuth()` is called outside of `<AuthProvider>`, the guard in `useAuth()` (line 86) will throw a helpful error."
+    },
+    {
+      "file": "frontend/client/src/contexts/AuthContext.jsx",
+      "line": 6,
+      "description": "## AuthProvider state and initialization\n\n**State:**\n- `user` — the logged-in user object (or `null` if not logged in). Contains `username`, `role`, `permissions`.\n- `loading` — `true` while checking localStorage on startup. Used to show a loading spinner and prevent a flash of \"unauthenticated\" state.\n\n**useEffect (lines 10-28):** Runs once on mount. Reads `sarinya_token` and `sarinya_user` from `localStorage`. If both exist, restores the user session by calling `setUser()` and `setAuthToken()`. The `try/catch` handles corrupted JSON in localStorage gracefully.\n\nThe `setLoading(false)` at line 27 happens regardless of whether a token was found — it signals that the \"auth check\" phase is complete and the app can proceed to render protected routes."
+    },
+    {
+      "file": "frontend/client/src/contexts/AuthContext.jsx",
+      "line": 30,
+      "description": "## Auth actions: login, logout, updateUser\n\n**`login(userData, token)`** (line 30): Called by `LoginPage` after a successful API response. Saves to `localStorage`, sets the axios header, and updates state — triggering a re-render in all components using `useAuth()`.\n\n**`logout()`** (line 37): Calls the backend's `/auth/logout` (which may invalidate the token server-side), then cleans up everything client-side. The `try/catch` ensures that even if the API call fails (e.g., network error), the client still clears its local state.\n\n**`updateUser(userData)`** (line 49): Used by the admin user management page when a user's own data changes. Updates both `localStorage` and React state without requiring a re-login."
+    },
+    {
+      "file": "frontend/client/src/contexts/AuthContext.jsx",
+      "line": 54,
+      "description": "## Permission helpers: hasPermission, isAdmin, isAuthenticated\n\n**`hasPermission(module, action)`**: The core permission check. Returns `true` if:\n- The user is an admin (admins bypass all permission checks), OR\n- `user.permissions[module][action]` is `true`\n\nThe `?.` (optional chaining) operator prevents crashes if `permissions` is undefined — equivalent to Rails' `&.` safe navigation operator.\n\n**`isAdmin()`**: Shorthand for `user?.role === 'admin'`.\n\n**`isAuthenticated()`**: Returns `true` if `user` is not null/undefined. `!!user` converts the object to a boolean.\n\nThese functions are provided in the context `value` object (lines 70-79) so any component that calls `useAuth()` gets access to all of them."
+    },
+    {
+      "file": "frontend/client/src/components/ProtectedRoute.jsx",
+      "line": 1,
+      "description": "## Section: ProtectedRoute — Route Guard Component\n\nThis component wraps page routes in `App.js`. It accepts three props:\n- `children` — the page to render if auth passes\n- `requiredPermission` — `{ module, action }` object for permission check\n- `requiredRole` — a role string or array of roles\n\n**Auth check flow (lines 12-42):**\n1. While auth is loading (checking localStorage) → show full-screen spinner\n2. No user → `<Navigate to=\"/\">` redirects to login page\n3. `requiredRole` provided but user's role doesn't match → redirect to `/dashboard`\n4. `requiredPermission` provided but `hasPermission()` returns false → redirect to `/dashboard`\n5. All checks pass → render `children` (the page)\n\n`<Navigate to=\"...\" replace>` is React Router's redirect. The `replace` option replaces the current history entry instead of pushing a new one — so clicking \"back\" doesn't loop back to the protected page."
+    },
+    {
+      "file": "frontend/client/src/components/layout/Layout.jsx",
+      "line": 1,
+      "description": "## Section: Layout — Shell Component\n\nSimple but important. The `Layout` component provides the persistent shell that surrounds every authenticated page:\n\n- `<Sidebar />` — the left sidebar, visible on desktop (md+ screens)\n- `<BottomNav />` — a bottom navigation bar, visible on mobile only\n- `<main className=\"md:pl-64\">` — the content area, padded left by 256px on desktop to avoid the sidebar\n\nThe `children` prop holds the actual page (e.g., `<DashboardPage />`). The `min-h-screen bg-gray-50` makes the background fill the full viewport.\n\nThis is a **presentational component** — no state, no logic, just structure."
+    },
+    {
+      "file": "frontend/client/src/components/layout/Sidebar.jsx",
+      "line": 1,
+      "description": "## Section: Sidebar\n\nThe sidebar renders three sections:\n1. **Header** (lines 24-33): Logo/brand area with ChefHat icon and app name\n2. **Navigation** (lines 35-50): Links that appear based on user permissions\n3. **User info + logout** (lines 52-74): Shows current user's avatar initial, username, role, and logout button\n\n`useNavigate()` (line 16) is React Router's programmatic navigation hook. `navigate('/')` is equivalent to `redirect_to root_path` in Rails. Here it's called after logout to send the user back to the login page.\n\n`hidden md:flex` is a Tailwind responsive class — hides the sidebar on mobile, shows it on medium+ screens. The bottom nav takes over on mobile."
+    },
+    {
+      "file": "frontend/client/src/components/layout/Sidebar.jsx",
+      "line": 39,
+      "description": "## Conditional rendering with &&\n\nLines 39-49 show the permission-based nav rendering pattern:\n```jsx\n{hasPermission('inventory', 'view') && (\n  <NavItem to=\"/inventory\" icon={Package} label=\"Inventory\" />\n)}\n```\n\nThe `&&` operator in JSX works like this: if the left side is truthy, React renders the right side. If false, it renders nothing.\n\nThis is the most common conditional rendering pattern in React. The equivalent in ERB:\n```erb\n<% if current_user.can?(:view, :inventory) %>\n  <%= render NavItem, to: '/inventory', label: 'Inventory' %>\n<% end %>\n```"
+    },
+    {
+      "file": "frontend/client/src/components/layout/NavItem.jsx",
+      "line": 1,
+      "description": "## Section: NavItem — Active Link\n\n`NavLink` from `react-router-dom` is like `link_to` but it automatically detects if its `to` path matches the current URL.\n\nThe `className` prop accepts a **function** instead of a string. That function receives `{ isActive }` (an object with the active state) and returns the appropriate CSS classes. This is a callback/function-as-prop pattern — common in React when a component needs to communicate state back to the parent's rendering logic.\n\nThe `variant` prop determines layout:\n- `sidebar` (default): horizontal row with icon + label (for desktop)\n- `bottom`: stacked icon over label (for the mobile bottom nav)\n\nThis single component serves both use cases — no code duplication."
+    },
+    {
+      "file": "frontend/client/src/components/Button.jsx",
+      "line": 1,
+      "description": "## Section: Button Component\n\nA fully-featured button that handles variants, sizes, icons, and loading state.\n\n**Variants** (lines 16-27): Each maps to Tailwind classes. `primary`, `success`, `danger`, `warning`, `outline`, `ghost`. The color scheme follows the Tailwind custom colors defined in `tailwind.config.js`.\n\n**`icon: Icon`** (line 7): Prop destructuring with rename. The parent passes `icon={Plus}` (a Lucide icon component), and inside the Button it's called `Icon` (capital I) so React treats it as a component.\n\n**Loading state** (lines 56-60): When `loading={true}`, the button renders a spinning `Loader2` icon + \"Loading...\" text, and the button is disabled. This prevents double-submitting forms.\n\n**`...props` spread** (line 13, line 41): Any extra props (like `type=\"submit\"`, `onClick`, `form`) are passed through to the underlying `<button>` element. This is the \"rest props\" pattern — makes wrapper components transparent."
+    },
+    {
+      "file": "frontend/client/src/components/Modal.jsx",
+      "line": 1,
+      "description": "## Section: Modal Component\n\nThe Modal manages its own enter/exit animation using two state flags:\n- `shouldRender` — controls DOM presence (the modal exists in the DOM or not)\n- `isAnimating` — controls CSS transition classes (opacity/scale/translate)\n\n**Opening animation** (lines 21-26):\n1. `shouldRender = true` → DOM element appears (invisible, scale-95)\n2. `requestAnimationFrame` queues `isAnimating = true` for the next paint\n3. CSS transitions animate the modal to full size/opacity\n\n**Closing animation** (lines 27-30):\n1. `isAnimating = false` → CSS transitions play in reverse\n2. After 200ms (the CSS transition duration), `shouldRender = false` removes it from DOM\n\n**Keyboard and backdrop** (lines 34-57): Two `useEffect` calls handle Escape key (close modal) and body overflow (prevent background scrolling while modal is open). The cleanup return functions remove event listeners when the component unmounts."
+    },
+    {
+      "file": "frontend/client/src/components/StatsCard.jsx",
+      "line": 1,
+      "description": "## Section: StatsCard Component\n\nDisplays a single stat metric (count, currency, etc.) on the dashboard.\n\n**Color scheme lookup** (lines 14-38): A plain object acts as a lookup table. `colorSchemes[colorScheme]` returns the right Tailwind class names for background, icon, and value colors. The `colorScheme` prop must be one of: `primary`, `success`, `warning`, `danger`.\n\n**Trend icon** (lines 43-50): Ternary operators pick the right icon and color class based on the `trend` prop value (`'up'`, `'down'`, or anything else).\n\n**`onClick` prop** (line 12): When provided, the card becomes clickable (with `cursor-pointer` class). On the dashboard, clicking a stats card navigates to the relevant page (e.g., clicking the inventory count card goes to `/inventory`)."
+    },
+    {
+      "file": "frontend/client/src/pages/LoginPage.jsx",
+      "line": 1,
+      "description": "## Section: LoginPage\n\nThe login page is the only page without `<Layout>` — it has its own full-screen design.\n\n**State** (lines 12-15):\n- `username`, `password` — controlled input values\n- `loading` — shows spinner on the button during API call\n- `error` — displays error message if login fails\n\n**Already-logged-in redirect** (lines 18-26): A `useEffect` that runs whenever `user` changes. If there's already a user (browser refresh while logged in), immediately redirect to the appropriate page. This prevents logged-in users from seeing the login form."
+    },
+    {
+      "file": "frontend/client/src/pages/LoginPage.jsx",
+      "line": 28,
+      "description": "## Login form submission\n\n`handleSubmit` is the form's `onSubmit` handler:\n\n1. `e.preventDefault()` — prevents the browser's default form submission (which would do a full page reload). In Rails, `form_with` handles this automatically; in React you must do it manually.\n2. Clears any previous error, sets loading state\n3. `API.post('/auth/login', { username, password })` — POST request to the backend\n4. On success: destructure `{ token, user: userData }` from response, call `login()` from context, navigate based on role\n5. On error (catch block): extract the error message from `err.response.data.error` — the Express backend sends errors in this shape\n6. `finally`: always set `loading = false` to re-enable the button\n\nThe `err.response?.data?.error` chain uses optional chaining because `err.response` may be undefined if the request never reached the server (network error)."
+    },
+    {
+      "file": "frontend/client/src/pages/LoginPage.jsx",
+      "line": 56,
+      "description": "## Login page JSX structure\n\nThe JSX shows several patterns:\n\n**Conditional error display** (lines 75-80):\n```jsx\n{error && (\n  <div className=\"...error styles...\">{error}</div>\n)}\n```\nThe error div only renders when `error` is a non-empty string.\n\n**Controlled inputs** (lines 84-103): Each `<Input>` has `value={username}` and `onChange={(e) => setUsername(e.target.value)}`. The component \"owns\" the input value — React state is the single source of truth.\n\n**Arrow function in onChange**: `(e) => setUsername(e.target.value)` is an inline arrow function. `e` is the DOM event, `e.target.value` is the current input value. Same as `params[:username]` but live on every keystroke."
+    },
+    {
+      "file": "frontend/client/src/pages/DashboardPage.jsx",
+      "line": 1,
+      "description": "## Section: DashboardPage — Overview\n\nThe dashboard is the most complex page. It has:\n- A **stats grid** showing inventory count, low stock, monthly sales, monthly revenue, expired items, expiring-soon items\n- A **daily revenue bar chart** (using the Recharts library) with year/month navigation\n- An **expiring items table** listing items within 7 days of expiry\n\nAt the top, constants are defined at module level (lines 30-33) — outside the component function. These don't change during the app's lifecycle, so they don't need to be in state. `CURRENT_MONTH`, `CURRENT_YEAR`, `CURRENT_DAY` are computed once when the module loads."
+    },
+    {
+      "file": "frontend/client/src/pages/DashboardPage.jsx",
+      "line": 35,
+      "description": "## RevenueChart — A child component defined in the same file\n\n`RevenueChart` is defined as a function inside `DashboardPage.jsx` (not in its own file). This is fine for components that are only used in one place.\n\nIt receives its data and navigation callbacks as props:\n- `data` — array of `{ day, label, revenue }` objects from the API\n- `selectedYear` / `selectedMonth` — current selection\n- `onYearChange` / `onMonthChange` — callback functions to update year/month in the parent\n\n**Callbacks as props** (like `onYearChange`): The child component calls `onYearChange((y) => y - 1)` when the left arrow is clicked. The parent (`DashboardPage`) passed `setSelectedYear` as this callback, so the year state in the parent gets decremented. This is the React pattern for **child-to-parent communication** — the child calls a function the parent provided.\n\nIn Rails, this would be a form submission back to the controller."
+    },
+    {
+      "file": "frontend/client/src/pages/DashboardPage.jsx",
+      "line": 174,
+      "description": "## DashboardPage state declarations\n\nAll state is declared at the top of the component:\n- `loading` / `chartLoading` — separate loading states for the stats vs. the chart (they load independently)\n- `inventoryCount`, `lowStockCount`, `salesCount`, `totalRevenue` — numbers for the stat cards\n- `monthlyRevenue` — array for the chart\n- `selectedYear`, `selectedMonth` — user-controlled chart navigation\n- `availableYears` — years that have sales data (disables going back before the first sale)\n- `expiredCount`, `expiringSoonCount`, `expiringItems` — for the expiration section\n\nEach piece of data is its own `useState` call. In a larger app, these might be combined into a single `useReducer`, but separate `useState` is fine here."
+    },
+    {
+      "file": "frontend/client/src/pages/DashboardPage.jsx",
+      "line": 193,
+      "description": "## DashboardPage useEffect hooks\n\n**First `useEffect` (line 193)**: Runs when `user` changes. On mount, `user` becomes the restored session user, triggering `fetchData()` and `fetchAvailableYears()`. If `user` is null, redirects to login.\n\n**Second `useEffect` (line 202)**: Runs when `selectedYear` or `selectedMonth` changes. Calls `fetchDailyRevenue(year, month)`. This means: when the user clicks the month/year navigation arrows, this effect fires automatically and updates the chart.\n\nThis is **reactive programming** — instead of manually calling fetch when a button is clicked, you declare which state changes should trigger a fetch, and React handles the wiring."
+    },
+    {
+      "file": "frontend/client/src/pages/DashboardPage.jsx",
+      "line": 219,
+      "description": "## fetchData — Parallel API calls with Promise.all\n\n`Promise.all([...])` fires multiple API requests simultaneously and waits for all to complete — like `async` in Rails or concurrent queries.\n\n```jsx\nconst [invRes, salesRes] = await Promise.all([\n  API.get('/inventory'),\n  API.get('/sales', { params: { timeRange: 'monthly' } }),\n]);\n```\n\nThis is faster than awaiting each request sequentially. Both requests go out at the same time; the code continues when both are done.\n\nAfter getting the data:\n- Counts low stock items (client-side filter, no extra API call)\n- Calculates total revenue with `.reduce()` (like Ruby's `sum`)\n- Filters and sorts expiring items (within 7 days) client-side"
+    },
+    {
+      "file": "frontend/client/src/pages/DashboardPage.jsx",
+      "line": 281,
+      "description": "## Loading state guard\n\n```jsx\nif (loading) {\n  return <LoadingSpinner size=\"large\" text=\"Loading dashboard...\" />;\n}\n```\n\nThis is a **guard clause** in JSX — the component returns early with a spinner if data isn't ready yet. Nothing below this line renders while loading.\n\nIn Rails, you'd show a spinner via JavaScript after the page loads. In React, the component simply renders the spinner instead of the table during the loading phase, then automatically switches to the real content when `setLoading(false)` is called after the API responds."
+    },
+    {
+      "file": "frontend/client/src/pages/DashboardPage.jsx",
+      "line": 310,
+      "description": "## Stats grid and clickable cards\n\nLines 310-362 render the stats grid. Each `<StatsCard>` gets an `onClick` prop that calls `navigate('/inventory')` (or `/sales`, etc.).\n\nNotice how `colorScheme` is computed dynamically:\n```jsx\ncolorScheme={lowStockCount > 0 ? 'warning' : 'success'}\n```\n\nThis is an inline ternary expression in JSX props. If there are low stock items, the card turns yellow; otherwise green. This mirrors the pattern of conditionally applying CSS classes in ERB but as pure JavaScript logic."
+    },
+    {
+      "file": "frontend/client/src/pages/DashboardPage.jsx",
+      "line": 391,
+      "description": "## Expiring items table — List rendering with .map()\n\nLines 427-459 show how React renders lists:\n```jsx\n{expiringItems.map((item) => (\n  <tr key={item._id}>\n    <td>{item.name}</td>\n    ...\n  </tr>\n))}\n```\n\n`.map()` transforms an array into an array of JSX elements. The `key={item._id}` prop is **required** by React on list items — it helps React efficiently update the DOM when items are added/removed/reordered. Missing keys cause warnings; wrong keys cause bugs.\n\nThe `key` is like a Rails `dom_id` helper — it uniquely identifies each row. Use the database ID, never the array index (indexes cause bugs when items are reordered)."
+    },
+    {
+      "file": "frontend/client/src/pages/InventoryPage.jsx",
+      "line": 1,
+      "description": "## Section: InventoryPage — Overview\n\nThe most feature-rich page. It has two tabs:\n1. **Active Stock** — the current inventory table with add/edit/sell/pull-out actions\n2. **Discrepancies** — a log of all pull-out records\n\nKey patterns you'll see:\n- Multiple modals (add, sell, edit, pull-out) each with their own open/close state and form state\n- Sorted + filtered table (client-side, no extra API calls)\n- Permission-gated action buttons (sell, edit, pull-out, delete only appear if allowed)\n- URL param reading on mount (the dashboard's stat cards link here with `?sort=quantity&dir=asc`)"
+    },
+    {
+      "file": "frontend/client/src/pages/InventoryPage.jsx",
+      "line": 98,
+      "description": "## useEffect — Reading URL params on mount\n\nLines 108-115 read the URL query string and apply a sort:\n```jsx\nuseEffect(() => {\n  const params = new URLSearchParams(location.search);\n  const sort = params.get('sort');\n  if (sort) setSortConfig({ key: sort, direction: dir });\n}, [location.search]);\n```\n\n`useLocation()` from React Router gives access to the current URL's `search` string (the `?sort=quantity&dir=asc` part). This `useEffect` runs whenever the URL's search params change.\n\nThe dashboard's \"Low Stock\" stat card links to `/inventory?sort=quantity&dir=asc`, so clicking it opens the inventory page pre-sorted by quantity ascending. This is equivalent to passing params in a Rails `redirect_to inventory_path(sort: :quantity)`."
+    },
+    {
+      "file": "frontend/client/src/pages/InventoryPage.jsx",
+      "line": 141,
+      "description": "## handleAddItem — Form submission pattern\n\nThe pattern for every form in this app:\n1. `e.preventDefault()` — stop browser's default form POST\n2. Validate required fields (return early if any are empty)\n3. Set loading state (`setSubmitting(true)`)\n4. `await` the API call (service function)\n5. On success: reset form fields, close modal, reload data\n6. On error: show alert\n7. `finally`: always clear loading state\n\nThis is repeated for add, edit, sell, and pull-out. Each has its own loading boolean so only the specific submit button shows a spinner."
+    },
+    {
+      "file": "frontend/client/src/pages/InventoryPage.jsx",
+      "line": 312,
+      "description": "## SortIcon — A tiny component defined inline\n\n`SortIcon` (lines 320-325) is defined as a function inside `InventoryPage`. It's a micro-component that renders the correct sort indicator arrow for a table column.\n\nIt reads `sortConfig` from the outer component's scope (a **closure** — the inner function can access variables from the outer function). This avoids needing to pass `sortConfig` as a prop every time.\n\nThe pattern: if this column is not the active sort → show a neutral icon. If it is the active sort → show up or down chevron.\n\nInline component definitions like this are fine for small, single-use components."
+    },
+    {
+      "file": "frontend/client/src/pages/InventoryPage.jsx",
+      "line": 327,
+      "description": "## filteredItems — Derived data (no state needed)\n\n`filteredItems` is computed on every render from `items` and `sortConfig` and `searchTerm`. It:\n1. Copies the array (`[...items]`) to avoid mutating state directly (important — never mutate React state directly)\n2. Filters by search term (case-insensitive)\n3. Sorts by the configured column and direction, with special handling for date fields\n\nNotice there's no `useEffect` watching `searchTerm` to update a filtered list — that would be over-engineering. Since `filteredItems` is just a `const` recalculated on each render, it's always fresh. React is fast enough that this recalculation is imperceptible."
+    },
+    {
+      "file": "frontend/client/src/pages/InventoryPage.jsx",
+      "line": 352,
+      "description": "## Tab rendering with conditional JSX blocks\n\nLines 426-681 show the two tab bodies. Instead of a router, a simple `activeTab` state string controls which tab content is visible:\n\n```jsx\n{activeTab === 'stock' && (\n  <> ... inventory table ... </>\n)}\n{activeTab === 'discrepancies' && (\n  <> ... pull-outs table ... </>\n)}\n```\n\nThe `<>...</>` syntax is a **Fragment** — a wrapper that groups multiple elements without adding an extra DOM node. Equivalent to Rails' `<%= content_tag :div do ... end %>` but without the div.\n\nThe discrepancies tab has lazy loading: `if (activeTab === 'discrepancies' && pullOuts.length === 0) { loadPullOuts(); }` — it only fetches when the tab is first opened."
+    },
+    {
+      "file": "frontend/client/src/pages/InventoryPage.jsx",
+      "line": 684,
+      "description": "## Modal usage pattern — Controlled modals\n\nThe Add Item modal (lines 684-696) shows the standard modal pattern:\n\n```jsx\n<Modal isOpen={isModalOpen} onClose={handleCloseModal} title=\"Add New Item\">\n  <form onSubmit={handleAddItem} className=\"space-y-4\">\n    <Input ... />\n    <Button type=\"submit\">Add Item</Button>\n  </form>\n</Modal>\n```\n\n`isOpen` is a boolean from state. When `true`, the Modal renders and animates in. The form lives inside the modal as `children`. `onClose` resets all form fields and sets `isModalOpen = false`.\n\nThis pattern — a boolean flag controlling modal visibility — is simpler than imperative `show()`/`hide()` calls. The state is the source of truth; the UI follows."
+    },
+    {
+      "file": "frontend/client/src/pages/InventoryPage.jsx",
+      "line": 749,
+      "description": "## Pull Out modal — Complex conditional form\n\nThe Pull Out modal (lines 749-849) is the most complex form. It has a conditional section that appears based on a checkbox:\n\n```jsx\n<input\n  type=\"checkbox\"\n  checked={addReplacement}\n  onChange={(e) => setAddReplacement(e.target.checked)}\n/>\n{addReplacement && (\n  <div>...replacement fields...</div>\n)}\n```\n\nWhen `addReplacement` is checked, three additional fields appear (replacement quantity, expiration date). The `isPullOutFormValid` computed value (line 346) validates the form accounting for whether replacement fields are required.\n\nThis kind of dynamic form behavior would require significant JavaScript in a Rails view. In React, it's just state and conditional rendering."
+    },
+    {
+      "file": "frontend/client/src/pages/SalesPage.jsx",
+      "line": 1,
+      "description": "## Section: SalesPage — Server-side filtering\n\nUnlike inventory (client-side search), sales uses **server-side filtering** by time range and date. The `useEffect` that loads sales depends on `[timeRange, selectedDate]`:\n\n```jsx\nuseEffect(() => {\n  loadSales();\n}, [timeRange, selectedDate]);\n```\n\nWhenever the user changes the time range dropdown or picks a specific date, a new API request fires to get the matching sales. The `params` object in `API.get('/sales', { params: {...} })` appends query string parameters to the URL: `/api/sales?timeRange=monthly&date=2026-03-12`.\n\nThe search input (`search` state) is still client-side — it filters the already-loaded results in real time without another network request."
+    },
+    {
+      "file": "frontend/client/src/services/inventoryService.js",
+      "line": 1,
+      "description": "## Section: Services — API abstraction layer\n\nEach service file collects related API calls and exports them as named functions. This keeps page components clean — they call `getInventoryItems()` not `API.get('/inventory')`.\n\nKey patterns:\n- Every function is `async` and `await`s the API call\n- Returns `res.data` (the response body) not the full axios response object\n- All functions are simple — no error handling here. Errors bubble up to the calling component's `try/catch`\n\nThis is analogous to a Rails **repository pattern** or Service Object — the data access logic is isolated and testable independently of the UI."
+    },
+    {
+      "file": "frontend/client/src/services/authService.js",
+      "line": 1,
+      "description": "## Auth service vs AuthContext — Two layers\n\nNote that `authService.js` exists alongside `AuthContext.jsx`. They do slightly different things:\n\n- `authService.js` — low-level: just makes the HTTP call and updates localStorage + axios header\n- `AuthContext.jsx` — high-level: manages the React state (`user`), provides the `login`/`logout` functions that also update React state\n\nThe page components (like `LoginPage`) call the context's `login()` function, not the service directly. The context's `login()` internally handles both the state update and could optionally call the service.\n\nIn this codebase, `LoginPage` calls `API.post` directly rather than using `authService.login()` — both approaches work. The context's `login()` is the canonical way."
+    },
+    {
+      "file": "frontend/client/src/components/Input.jsx",
+      "line": 1,
+      "description": "## Section: Input Component\n\nA styled wrapper around `<input>` with a label, optional icon, and consistent focus/border styling.\n\nKey features:\n- `icon: Icon` prop (same rename pattern as Button) renders an icon inside the input on the left side\n- All standard input props (`type`, `value`, `onChange`, `placeholder`, `required`, `min`, `max`) are passed through via `...props`\n- Focus ring uses Tailwind's `focus:ring-4 focus:ring-primary-100` — the colored glow on focus\n\nThe consistent styling means every `<Input>` in the app looks identical. Adding a new form field anywhere is just `<Input label=\"...\" value={...} onChange={...} />`."
+    },
+    {
+      "file": "frontend/client/src/pages/AdminDashboardPage.jsx",
+      "line": 1,
+      "description": "## Section: AdminDashboardPage\n\nThe admin dashboard is the entry page for admin users. It typically shows:\n- Links to User Management (`/admin/users`)\n- Links to Activity Logs (`/admin/activity-logs`)\n- Admin-only stats\n\nThis page is guarded by `requiredRole=\"admin\"` in `App.js` — staff users are redirected away before it renders.\n\nThe admin pages demonstrate a common pattern: using `useNavigate()` for imperative navigation (when you need to navigate in response to an event, not a link click)."
+    },
+    {
+      "file": "frontend/client/src/pages/UserManagementPage.jsx",
+      "line": 1,
+      "description": "## Section: UserManagementPage\n\nThe user management page lets admins create staff accounts and set their permissions.\n\nThe permissions UI is powered by `<PermissionCheckbox>` components — one per module/action combination. When the admin changes a checkbox, the component updates local state optimistically and then saves to the backend.\n\nKey patterns here:\n- Editing nested objects in state: `setEditUser(prev => ({ ...prev, permissions: { ...prev.permissions, inventory: { ...prev.permissions.inventory, view: true } } }))`\n- The spread operator (`...`) is React's way of doing immutable updates — never mutate `prev` directly, always return a new object"
+    },
+    {
+      "file": "frontend/client/src/pages/ActivityLogsPage.jsx",
+      "line": 1,
+      "description": "## Section: ActivityLogsPage\n\nDisplays a log of all actions performed in the system (who added what inventory, who made a sale, etc.). The backend writes a log entry for every significant action via `activityLogger.js`.\n\nThis page is read-only and admin-only. The main pattern here is a **paginated or filtered table** fetched from the API on mount.\n\nThe activity logs give admins a full audit trail — equivalent to `paper_trail` gem in Rails."
+    },
+    {
+      "file": "frontend/client/src/components/LoadingSpinner.jsx",
+      "line": 1,
+      "description": "## Section: Utility Components\n\n`LoadingSpinner` renders an animated spinner with optional text. Used in three contexts:\n1. Full-page loading (while `ProtectedRoute` checks auth)\n2. Inside page content areas (while data is fetching)\n3. Table skeleton (`TableSkeleton.jsx`) — renders ghost placeholder rows while the table data loads\n\nThese are pure presentational components — they receive size/text props and return styled divs. No state, no effects, no API calls."
+    },
+    {
+      "file": "frontend/client/src/index.css",
+      "line": 1,
+      "description": "## Section: Tailwind CSS\n\nThe app uses **Tailwind CSS** — a utility-first CSS framework. Instead of writing `.button { background: blue; padding: 8px; }`, you apply utility classes directly in JSX:\n```jsx\n<button className=\"bg-blue-500 px-4 py-2 rounded-lg text-white\">\n```\n\nIn `index.css`, the `@tailwind` directives inject all Tailwind's utility classes. The `tailwind.config.js` extends the default color palette with custom colors (`primary`, `success`, `warning`, `danger`) that map to specific shades.\n\nIn Rails, this is equivalent to a CSS framework like Bootstrap or Bulma, but instead of semantic class names (`.btn-primary`), you compose styles from small utility classes. This is why component code looks verbose — all styling is inline."
+    },
+    {
+      "file": "frontend/client/src/App.js",
+      "line": 13,
+      "description": "## Final: End-to-end flow recap\n\nNow you've read every file. Here's the complete picture of a typical user interaction — **recording a sale**:\n\n1. User opens `/inventory` (ProtectedRoute checks auth + sales:view permission ✓)\n2. `InventoryPage` mounts → `loadItems()` → `GET /api/inventory` → returns item array → `setItems(data)` → table renders\n3. User clicks **Sell** button on a row → `handleOpenSellModal(item)` → `setSelectedItem(item)`, `setIsSellModalOpen(true)`\n4. Modal animates in → `isAnimating = true` → CSS transitions run\n5. User types quantity → `setSellQuantity(e.target.value)` → `sellPreviewTotal` recalculates → total preview renders instantly\n6. User clicks **Confirm Sale** → `handleSellItem()` → `e.preventDefault()` → `setSelling(true)` → `await sellInventoryItem(item._id, qty)` → `POST /api/inventory/:id/sell`\n7. Backend decrements inventory, creates a Sale record, writes an activity log\n8. Success → `handleCloseSellModal()` → `loadItems()` → updated inventory reloads → table re-renders with new quantity\n\nEvery layer you've toured plays a role in this flow. You're ready to work in this codebase!"
+    }
+  ],
+  "ref": "main"
+}

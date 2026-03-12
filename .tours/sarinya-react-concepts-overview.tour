@@ -1,0 +1,132 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "Sarinya — React Concepts & Terminology Overview (Read First)",
+  "steps": [
+    {
+      "file": "frontend/client/src/index.js",
+      "line": 1,
+      "description": "## What is this app, and what is React?\n\nThis is the **Sarinya Restaurant System** — an inventory and sales management tool for a restaurant. It has:\n- A **backend** (Express.js + MongoDB) that works just like a Rails API — controllers, routes, models\n- A **frontend** (React) that runs entirely in the browser and talks to the backend via HTTP\n\n**React is NOT a Rails app.** In Rails, the server renders HTML and sends it to the browser. In React, the server sends a single empty HTML file, and React builds the page **inside the browser** using JavaScript.\n\nThink of it this way:\n- Rails = server renders every page, sends HTML\n- React = browser renders every page, fetches data via API\n\nThis file (`index.js`) is the entry point — the equivalent of Rails' `application.rb` boot process. It finds the `<div id=\"root\">` in `public/index.html` and tells React to take over that div and render the entire app inside it."
+    },
+    {
+      "file": "frontend/client/src/index.js",
+      "line": 14,
+      "description": "## The HTML anchor point\n\nThe single line `ReactDOM.createRoot(document.getElementById('root'))` is where React attaches itself to the page. If you open `public/index.html`, you'll find just one `<div id=\"root\"></div>`. React fills that div with everything you see on screen.\n\nIn Rails terms: instead of rendering `layouts/application.html.erb` which contains `yield`, this single div is the `yield` — React fills it entirely."
+    },
+    {
+      "file": "frontend/client/src/App.js",
+      "line": 1,
+      "description": "## Components — The core concept of React\n\nIn Rails:\n- A **view** is an `.html.erb` file that renders HTML\n- A **partial** is a reusable chunk of view\n- A **helper** produces HTML snippets\n\nIn React, all of these are replaced by a single concept: the **Component**.\n\nA React component is just a **JavaScript function that returns HTML** (called JSX). Example:\n\n```jsx\nfunction Greeting() {\n  return <h1>Hello, world!</h1>;\n}\n```\n\nComponents are reusable, composable building blocks. You nest them like HTML tags: `<Sidebar />`, `<Button />`, `<Modal />`.\n\n`App.js` is the **root component** — the top-level one that contains everything else. It's like `application.html.erb` but written as a function."
+    },
+    {
+      "file": "frontend/client/src/App.js",
+      "line": 14,
+      "description": "## JSX — HTML inside JavaScript\n\nThe code inside the `return (...)` of a component looks like HTML but is actually **JSX** — a JavaScript syntax extension. A few key rules:\n\n| JSX | Why it's different from HTML |\n|-----|------------------------------|\n| `className=` | Use `className` instead of `class` (because `class` is a JS keyword) |\n| `{expression}` | Curly braces inject JavaScript values into the HTML |\n| `<Component />` | Self-closing tags are required for components with no children |\n| `onClick={}` | Event handlers are camelCase, not lowercase |\n\nIn Rails you'd write `<%= user.name %>` in ERB. In JSX you write `{user.name}`.\n\nJSX is compiled by a build tool (Webpack/Babel) before it reaches the browser — it's not actually HTML."
+    },
+    {
+      "file": "frontend/client/src/App.js",
+      "line": 15,
+      "description": "## React Router — The equivalent of `routes.rb`\n\nIn Rails, `config/routes.rb` maps URLs to controller actions:\n```ruby\nget '/dashboard', to: 'dashboard#index'\n```\n\nIn React, `react-router-dom` does the same thing client-side:\n```jsx\n<Route path=\"/dashboard\" element={<DashboardPage />} />\n```\n\nThe key difference: Rails routing happens on the **server** (each URL is a new HTTP request). React Router happens in the **browser** — navigating between pages never reloads the page. The URL changes, but it's all JavaScript swapping components in and out.\n\nThe `<Router>` wraps everything, `<Routes>` is the container, and each `<Route>` maps a path to a component (the page)."
+    },
+    {
+      "file": "frontend/client/src/App.js",
+      "line": 22,
+      "description": "## Props — Passing data into components\n\nLook at this:\n```jsx\n<ProtectedRoute requiredPermission={{ module: 'inventory', action: 'view' }}>\n```\n\n`requiredPermission` is a **prop** (short for \"property\"). Props are how you pass data into a component — exactly like method arguments or partial locals in Rails.\n\nIn Rails: `<%= render 'nav_item', path: '/inventory', label: 'Inventory' %>`\nIn React: `<NavItem to=\"/inventory\" label=\"Inventory\" />`\n\nInside the component, props arrive as a plain JavaScript object in the function's first argument:\n```jsx\nfunction NavItem({ to, label }) {\n  return <a href={to}>{label}</a>;\n}\n```\n\nProps flow **downward only** — from parent to child. A child can't directly change its parent's props."
+    },
+    {
+      "file": "frontend/client/src/App.js",
+      "line": 15,
+      "description": "## Context — The equivalent of `current_user` and session\n\nIn Rails, you have `current_user` available in every controller and view because it's set up in `ApplicationController` and inherited everywhere.\n\nIn React, the equivalent is **Context**. The `<AuthProvider>` wraps the whole app here in `App.js`. This means **any component anywhere in the tree** can call `useAuth()` to get the current logged-in user, without having to pass it down through props.\n\nContexts are like global variables, but done properly — when the value changes (e.g., user logs in), every component using it automatically re-renders.\n\nYou'll see `const { user, login, logout } = useAuth()` in many files. That's how a component \"reads\" the session."
+    },
+    {
+      "file": "frontend/client/src/contexts/AuthContext.jsx",
+      "line": 1,
+      "description": "## State — The equivalent of instance variables in a controller\n\nIn a Rails controller, you store data in `@instance_variables` and they're available in the view:\n```ruby\n@users = User.all\n```\n\nIn React, a component stores data in **state** using the `useState` hook:\n```jsx\nconst [user, setUser] = useState(null);\n```\n\nThe `useState` call returns a pair: the **current value** (`user`) and a **setter function** (`setUser`). When you call `setUser(newValue)`, React automatically re-renders the component with the new value — just like how Rails re-renders the view when you change an instance variable.\n\nKey difference: in Rails, a page re-render means a full HTTP round-trip. In React, state changes trigger an **instant, in-browser re-render** — no network request needed."
+    },
+    {
+      "file": "frontend/client/src/contexts/AuthContext.jsx",
+      "line": 10,
+      "description": "## useEffect — The equivalent of `before_action` and lifecycle callbacks\n\nIn Rails, `before_action :authenticate_user!` runs before a controller action. In React, `useEffect` runs **after** a component renders (or when specific values change).\n\n```jsx\nuseEffect(() => {\n  // This runs once when the component first appears on screen\n  // Like an 'after_initialize' callback\n}, []); // empty array = run only once\n\nuseEffect(() => {\n  // This runs every time `user` changes\n  // Like an observer/callback on a model attribute\n}, [user]); // dependency array\n```\n\nIn this file, the `useEffect` on line 10 runs once when the app starts. It checks `localStorage` for a saved token and restores the user session — exactly like how Rails reads a session cookie on each request.\n\nThe `[]` at the end is the **dependency array**. Empty = run once. `[value]` = run whenever `value` changes."
+    },
+    {
+      "file": "frontend/client/src/contexts/AuthContext.jsx",
+      "line": 30,
+      "description": "## The Login flow\n\nHere's what happens when a user logs in, step by step:\n\n1. `LoginPage` collects username + password in local state (via `useState`)\n2. On form submit, it calls `API.post('/auth/login', { username, password })` — a regular HTTP POST to the Express backend\n3. The backend validates credentials, creates a JWT token, and returns `{ token, user }`\n4. `login(userData, token)` is called — this:\n   - Saves the token to `localStorage` (persists across browser refreshes)\n   - Sets the `Authorization: Bearer <token>` header on all future axios requests\n   - Calls `setUser(userData)` which triggers a React re-render everywhere `useAuth()` is used\n5. React Router's `navigate('/dashboard')` changes the URL to `/dashboard`\n6. The router renders `<DashboardPage />` automatically\n\nThe token in `localStorage` is the equivalent of Rails' session cookie — it proves who you are on every subsequent request."
+    },
+    {
+      "file": "frontend/client/src/api.js",
+      "line": 1,
+      "description": "## The API module — The equivalent of calling a Rails model or service\n\nIn Rails, your controller calls `User.find(id)` or `User.where(...)` directly on the model. There's no HTTP involved.\n\nIn React (a frontend-only app), there's no direct database access. Every data operation goes through an HTTP call to the backend. This file sets up **axios** — an HTTP client library — configured to always talk to `http://localhost:5000/api`.\n\nThe `setAuthToken` function adds or removes the `Authorization` header globally, so every request made with this `API` instance automatically sends the JWT token.\n\nThink of `api.js` as your HTTP client configuration — like setting up `Faraday` or `HTTParty` in a Rails service object."
+    },
+    {
+      "file": "frontend/client/src/services/inventoryService.js",
+      "line": 1,
+      "description": "## Services — Organizing API calls\n\nServices are simple modules that wrap HTTP calls. Instead of writing `API.get('/inventory')` directly inside a page component, the call is moved here for reusability.\n\nIn Rails terms, this is like a **Service Object** or a **Repository** — it abstracts the data-fetching logic away from the controller/view.\n\n| Service function | Equivalent Rails call |\n|---|---|\n| `getInventoryItems()` | `Inventory.all` |\n| `addInventoryItem(data)` | `Inventory.create!(data)` |\n| `updateInventoryItem(id, data)` | `item.update!(data)` |\n| `deleteInventoryItem(id)` | `item.destroy!` |\n| `sellInventoryItem(id, qty)` | A custom service that decrements stock and records a sale |\n\nThe difference: every one of these makes an HTTP request and returns a **Promise** (JavaScript's equivalent of a background job result you wait for)."
+    },
+    {
+      "file": "frontend/client/src/components/ProtectedRoute.jsx",
+      "line": 1,
+      "description": "## Protected Routes — The equivalent of `before_action :authenticate_user!`\n\nIn Rails, you protect controller actions with:\n```ruby\nbefore_action :authenticate_user!\nbefore_action :require_admin\n```\n\nIn React, `ProtectedRoute` is a wrapper component that checks auth before rendering the page:\n\n```jsx\n<ProtectedRoute requiredRole=\"admin\">\n  <AdminDashboardPage />\n</ProtectedRoute>\n```\n\nIf the user is not logged in → redirect to `/` (login page)\nIf the user lacks the required role → redirect to `/dashboard`\nIf the user lacks the required permission → redirect to `/dashboard`\n\nThis is a **\"wrapper component\"** pattern — common in React. The component wraps children and decides whether to show them or redirect. In Rails, this would be a `before_action` concern."
+    },
+    {
+      "file": "frontend/client/src/contexts/AuthContext.jsx",
+      "line": 54,
+      "description": "## Permissions system\n\nThe app has two roles: `admin` and `staff`. Staff members have fine-grained permissions per module and action.\n\nThe `hasPermission(module, action)` function checks:\n1. If there's no logged-in user → `false`\n2. If the user is `admin` → always `true` (admins can do everything)\n3. Otherwise → checks `user.permissions.inventory.view` (or whatever module/action)\n\nThis permission object comes from the database via the login response. It looks like:\n```json\n{\n  \"inventory\": { \"view\": true, \"add\": false, \"edit\": true, \"delete\": false },\n  \"sales\": { \"view\": true, \"add\": true }\n}\n```\n\nIn the Sidebar and pages, you'll see:\n```jsx\n{hasPermission('inventory', 'add') && <Button>Add Item</Button>}\n```\n\nThe `&&` operator is React's way of conditionally rendering — if the condition is false, the button simply doesn't appear in the DOM."
+    },
+    {
+      "file": "frontend/client/src/components/layout/Layout.jsx",
+      "line": 1,
+      "description": "## Layout components — The equivalent of `application.html.erb`\n\nIn Rails, `layouts/application.html.erb` wraps every page with the nav, header, and footer. The page content goes into `yield`.\n\nIn React, `Layout` is a component that wraps every page with the `Sidebar` and `BottomNav`. The page content is passed as **children** (React's version of `yield`):\n\n```jsx\n// In App.js:\n<Layout>\n  <DashboardPage />\n</Layout>\n\n// Inside Layout:\nexport default function Layout({ children }) {\n  return (\n    <div>\n      <Sidebar />\n      <main>{children}</main>  {/* ← children is the page component */}\n    </div>\n  );\n}\n```\n\n`children` is a special prop that contains whatever is nested inside a component's opening and closing tags."
+    },
+    {
+      "file": "frontend/client/src/components/layout/Sidebar.jsx",
+      "line": 13,
+      "description": "## Sidebar — Conditional rendering based on permissions\n\nThe Sidebar shows different nav items based on who's logged in. This is React's conditional rendering in action:\n\n```jsx\n{hasPermission('inventory', 'view') && (\n  <NavItem to=\"/inventory\" label=\"Inventory\" />\n)}\n{isAdmin() && (\n  <NavItem to=\"/admin\" label=\"Admin\" />\n)}\n```\n\n`&&` is shorthand for \"only render if condition is true\". This is equivalent to Rails ERB:\n```erb\n<% if current_user.can?(:view, :inventory) %>\n  <%= link_to 'Inventory', inventory_path %>\n<% end %>\n```\n\nThe sidebar also demonstrates calling `useAuth()` — a **custom hook** — to get the current user's data. Hooks always start with `use` and can only be called inside React components."
+    },
+    {
+      "file": "frontend/client/src/components/layout/NavItem.jsx",
+      "line": 1,
+      "description": "## NavLink — Active link highlighting\n\n`NavLink` is like `link_to` in Rails but with built-in \"active\" state detection. It automatically knows if the current URL matches its `to` path.\n\nInstead of passing a static string for `className`, you pass a **function** that receives `{ isActive }` and returns different classes based on whether the link is active:\n\n```jsx\nclassName={({ isActive }) =>\n  isActive ? 'text-blue-600 bg-blue-50' : 'text-gray-600'\n}\n```\n\nThis is equivalent to Rails' `nav_link_to` helper or manually comparing `request.path == path`.\n\nThe `variant` prop lets this same component render as a sidebar item (horizontal) or a bottom nav item (vertical) — demonstrating how props make components flexible."
+    },
+    {
+      "file": "frontend/client/src/pages/DashboardPage.jsx",
+      "line": 174,
+      "description": "## Pages — The equivalent of a controller action + view\n\nIn Rails, a request to `/dashboard` runs `DashboardController#index` which sets `@stats` and renders `views/dashboard/index.html.erb`.\n\nIn React, visiting `/dashboard` renders `<DashboardPage />` — a single function that **does both** things:\n1. Fetches data (like the controller action)\n2. Returns the HTML to display (like the view)\n\nThe `useState` calls at the top define all the local data the page needs (inventory count, sales count, revenue, etc.). The `useEffect` fetches that data from the API when the component first appears.\n\nThis pattern — fetch data in `useEffect`, store it in `useState`, display it in the return — is the most fundamental React pattern you'll use everywhere."
+    },
+    {
+      "file": "frontend/client/src/pages/DashboardPage.jsx",
+      "line": 193,
+      "description": "## Multiple useEffects — Reacting to data changes\n\nThis page has three `useEffect` calls, each with a different purpose:\n\n1. **Line ~194**: Runs once on mount (empty `[]`). Fetches dashboard stats and available years.\n2. **Line ~202**: Runs when `selectedYear` or `selectedMonth` changes. Fetches the revenue chart data for the newly selected month/year.\n\nThe second effect is powerful: when the user clicks the arrow to change the month in the chart, `setSelectedMonth` is called, which changes state, which triggers this `useEffect` which fetches new data, which updates the chart. **All automatically, with no explicit wiring.**\n\nIn Rails, this would require a form submission or AJAX call with JavaScript event listeners wired up manually."
+    },
+    {
+      "file": "frontend/client/src/pages/InventoryPage.jsx",
+      "line": 51,
+      "description": "## State management in a complex page\n\nThe `InventoryPage` has the most state in this app. At the top you'll see ~20 `useState` declarations covering:\n- The list of items and loading state\n- The currently open modal (add, sell, edit, pull-out)\n- The form fields for each modal\n- Sort configuration and search term\n\nIn Rails, form state lives in the HTML `<form>` fields and is only sent to the server on submit. In React, every keystroke updates state immediately — the input is **\"controlled\"** by React.\n\nA controlled input:\n```jsx\n<input\n  value={name}        {/* React controls the displayed value */}\n  onChange={(e) => setName(e.target.value)}  {/* Every keystroke updates state */}\n/>\n```\n\nThis lets you do things like live search filtering, real-time validation, and preview totals before submitting."
+    },
+    {
+      "file": "frontend/client/src/pages/InventoryPage.jsx",
+      "line": 327,
+      "description": "## Computed/derived values — No equivalent needed\n\n`filteredItems` is not stored in state — it's computed on every render:\n```jsx\nconst filteredItems = [...items]\n  .filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()))\n  .sort(...);\n```\n\nIn Rails, you'd use a scope or a helper: `@items.where(\"name LIKE ?\", \"%#{search}%\")`.\n\nIn React, since the component re-runs on every state change, this filter runs automatically whenever `items` or `searchTerm` changes. No need to store the filtered result — just compute it fresh each render.\n\nThis also means the search is **client-side** (no server request). The full list is already loaded; filtering just hides rows in the browser."
+    },
+    {
+      "file": "frontend/client/src/components/Modal.jsx",
+      "line": 1,
+      "description": "## Modals — Portals and animation state\n\nThe `Modal` component handles its own open/close animation. It uses two state variables:\n- `shouldRender`: controls whether the modal exists in the DOM at all\n- `isAnimating`: controls whether the CSS transition classes are applied\n\nWhen `isOpen` prop changes from `false` to `true`:\n1. `shouldRender` → `true` (DOM is created)\n2. On next frame, `isAnimating` → `true` (transition classes applied, animation plays)\n\nWhen `isOpen` prop changes from `true` to `false`:\n1. `isAnimating` → `false` (reverse animation plays)\n2. After 200ms (animation duration), `shouldRender` → `false` (DOM is removed)\n\nThe `useEffect` cleanup function (the `return () => clearTimeout(timer)`) is important — it prevents memory leaks if the component unmounts during the animation. In Rails terms, this is like an `after_destroy` callback that cleans up resources."
+    },
+    {
+      "file": "frontend/client/src/components/Button.jsx",
+      "line": 1,
+      "description": "## Reusable components with variant props\n\nThe `Button` component is a great example of a design system component. Instead of writing different CSS classes everywhere for different button styles, one component handles all variants:\n\n```jsx\n<Button variant=\"success\" size=\"small\" icon={Plus} loading={submitting}>\n  Add Item\n</Button>\n```\n\nThe `variant` prop maps to a set of Tailwind CSS classes. The `loading` prop automatically shows a spinner and disables the button. The `icon` prop accepts any icon component (from Lucide React) and renders it at the correct size.\n\nThis is the React equivalent of a Rails view helper like `custom_button_tag` — except much more powerful because it's a full component that can hold its own logic.\n\nThe `...props` spread passes any extra props (like `type=\"submit\"`, `onClick`, `disabled`) directly to the underlying `<button>` element — a common pattern for \"pass-through\" wrapper components."
+    },
+    {
+      "file": "frontend/client/src/components/StatsCard.jsx",
+      "line": 1,
+      "description": "## Props with defaults and computed values\n\n`StatsCard` shows key metrics on the dashboard. Its props have default values, just like Ruby method arguments:\n```jsx\nfunction StatsCard({\n  title,\n  value,\n  icon: Icon,\n  trend = null,     // default value\n  colorScheme = 'primary',  // default value\n  onClick = null,\n})\n```\n\nThe `icon: Icon` syntax is destructuring with renaming — the prop is called `icon` when you pass it in, but inside the component it's called `Icon` (capital letter required so React knows it's a component, not an HTML tag).\n\nThe `onClick = null` prop lets `StatsCard` be both clickable (navigates to a page) or static (no click behavior). The parent decides by passing `onClick` or not."
+    },
+    {
+      "file": "frontend/client/src/App.js",
+      "line": 13,
+      "description": "## Architecture overview — How it all fits together\n\nHere's the full picture of how a page request works in this React app:\n\n**Request flow (e.g., user visits `/inventory`):**\n1. Browser loads the single `index.html` + all JS\n2. `index.js` boots React, restores auth token from localStorage\n3. `App.js` renders: `AuthProvider` → `Router` → `Routes`\n4. Router matches `/inventory` → renders `<ProtectedRoute>` → checks auth → renders `<Layout>` → renders `<InventoryPage>`\n5. `InventoryPage` mounts → `useEffect` fires → `API.get('/inventory')` → Express backend → MongoDB → JSON response\n6. `setItems(data)` → React re-renders the table with inventory rows\n\n**Rails comparison:**\n| Rails | React |\n|---|---|\n| `routes.rb` | `App.js` Routes |\n| `ApplicationController` | `AuthContext` |\n| `before_action :authenticate!` | `<ProtectedRoute>` |\n| `layouts/application.html.erb` | `<Layout>` |\n| `@items = Inventory.all` | `useState` + `useEffect` + API call |\n| View template | Component's `return (...)` JSX |\n| Partial | Child component |\n| `form_with model: @item` | Controlled form with `useState` |\n| `link_to`, `button_to` | `<NavLink>`, `<Button>` |\n\nYou're ready for the detailed code tour!"
+    }
+  ],
+  "ref": "main"
+}
