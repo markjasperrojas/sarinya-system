@@ -26,7 +26,7 @@ exports.addSale = async (req, res) => {
 // READ ALL SALES
 exports.getSales = async (req, res) => {
   try {
-    const { search, timeRange, date } = req.query;
+    const { search, timeRange, date, page = 1, limit = 20 } = req.query;
     let query = {};
 
     // Search filter
@@ -77,8 +77,19 @@ exports.getSales = async (req, res) => {
       }
     }
 
-    const sales = await Sale.find(query).sort({ date: -1 });
-    res.json(sales);
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    const [sales, total] = await Promise.all([
+      Sale.find(query).sort({ date: -1 }).skip(skip).limit(limitNum),
+      Sale.countDocuments(query),
+    ]);
+
+    res.json({
+      sales,
+      pagination: { total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) },
+    });
   } catch (error) {
     res.status(500).json({ error: "Get sales failed" });
   }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import API from "../api";
 import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -12,6 +12,8 @@ import {
   TrendingUp,
   Search,
   Filter,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 export default function SalesPage() {
@@ -21,40 +23,39 @@ export default function SalesPage() {
   const [search, setSearch] = useState("");
   const [timeRange, setTimeRange] = useState("all");
   const [selectedDate, setSelectedDate] = useState("");
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
   const { hasPermission } = useAuth();
 
-  const loadSales = async () => {
-    setLoading(true);
-    try {
-      // Only filter by timeRange on server
-      const res = await API.get("/sales", {
-        params: {
-          timeRange: timeRange === "all" ? undefined : timeRange,
-          date: selectedDate || undefined,
-        },
-      });
-      setSales(res.data);
-    } catch (error) {
-      console.log("Error loading sales:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loadSales = useCallback(
+    async (page = 1) => {
+      setLoading(true);
+      try {
+        const params = { page, limit: 20 };
+        if (search) params.search = search;
+        if (timeRange !== "all") params.timeRange = timeRange;
+        if (selectedDate) params.date = selectedDate;
+
+        const res = await API.get("/sales", { params });
+        setSales(res.data.sales);
+        setPagination(res.data.pagination);
+      } catch (error) {
+        console.log("Error loading sales:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [search, timeRange, selectedDate]
+  );
 
   useEffect(() => {
-    loadSales();
-  }, [timeRange, selectedDate]); // Reload when timeRange or selectedDate changes
+    loadSales(1);
+  }, [loadSales]);
 
   const handleSearch = (e) => {
     e.preventDefault();
   };
 
-  // Client-side filtering for real-time search
-  const filteredSales = sales.filter((sale) =>
-    sale.itemName.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const overallTotal = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
+  const overallTotal = sales.reduce((sum, sale) => sum + sale.total, 0);
 
   const handleDeleteSale = async (id) => {
     if (!window.confirm("Are you sure you want to delete this sale?")) return;
@@ -62,7 +63,7 @@ export default function SalesPage() {
     setDeletingId(id);
     try {
       await API.delete(`/sales/${id}`);
-      loadSales();
+      loadSales(1);
     } catch (error) {
       console.log("Delete sale failed:", error);
       alert("Failed to delete sale");
@@ -84,7 +85,7 @@ export default function SalesPage() {
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Sales</h1>
                 <p className="text-xs text-gray-500 hidden sm:block">
-                  {filteredSales.length} transactions
+                  {pagination.total} total transactions
                 </p>
               </div>
             </div>
@@ -195,7 +196,7 @@ export default function SalesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {filteredSales.map((sale) => (
+                  {sales.map((sale) => (
                     <tr
                       key={sale._id}
                       className="hover:bg-gray-50 transition-colors"
@@ -235,7 +236,7 @@ export default function SalesPage() {
                     </tr>
                   ))}
 
-                  {filteredSales.length === 0 && !loading && (
+                  {sales.length === 0 && !loading && (
                     <tr>
                       <td colSpan="5" className="px-6 py-12 text-center">
                         <ShoppingCart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -250,6 +251,35 @@ export default function SalesPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+              <p className="text-sm text-gray-500">
+                Page {pagination.page} of {pagination.totalPages}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="small"
+                  icon={ChevronLeft}
+                  onClick={() => loadSales(pagination.page - 1)}
+                  disabled={pagination.page <= 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="small"
+                  onClick={() => loadSales(pagination.page + 1)}
+                  disabled={pagination.page >= pagination.totalPages}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
             </div>
           )}
         </div>
