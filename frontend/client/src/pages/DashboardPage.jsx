@@ -7,7 +7,6 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import {
   Package,
   AlertTriangle,
-  ShoppingCart,
   Banknote,
   LayoutDashboard,
   TrendingUp,
@@ -175,7 +174,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [inventoryCount, setInventoryCount] = useState(0);
   const [lowStockCount, setLowStockCount] = useState(0);
-  const [salesCount, setSalesCount] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [monthlyRevenue, setMonthlyRevenue] = useState([]);
   const [chartLoading, setChartLoading] = useState(true);
@@ -225,7 +223,7 @@ export default function DashboardPage() {
       ]);
 
       const items = Array.isArray(invRes.data) ? invRes.data : [];
-      const sales = Array.isArray(salesRes.data) ? salesRes.data : [];
+      const sales = Array.isArray(salesRes.data?.sales) ? salesRes.data.sales : [];
 
       setInventoryCount(items.length);
 
@@ -233,8 +231,6 @@ export default function DashboardPage() {
         (it) => Number(it.quantity) <= LOW_STOCK_THRESHOLD,
       ).length;
       setLowStockCount(low);
-
-      setSalesCount(sales.length);
 
       const revenue = sales.reduce((acc, s) => acc + Number(s.total), 0);
 
@@ -305,7 +301,7 @@ export default function DashboardPage() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 animate-fade-in">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 animate-fade-in">
           <StatsCard
             title="Total Inventory Items"
             value={inventoryCount}
@@ -320,14 +316,6 @@ export default function DashboardPage() {
             icon={AlertTriangle}
             colorScheme={lowStockCount > 0 ? "warning" : "success"}
             onClick={() => navigate("/inventory?sort=quantity&dir=asc")}
-          />
-
-          <StatsCard
-            title="Monthly Sales"
-            value={salesCount}
-            icon={ShoppingCart}
-            colorScheme="success"
-            onClick={() => navigate("/sales")}
           />
 
           <StatsCard
