@@ -8,7 +8,7 @@ import {
   Package,
   AlertTriangle,
   ShoppingCart,
-  DollarSign,
+  Banknote,
   LayoutDashboard,
   TrendingUp,
   ChevronLeft,
@@ -332,7 +332,7 @@ export default function DashboardPage() {
           <StatsCard
             title="Monthly Revenue"
             value={totalRevenue}
-            icon={DollarSign}
+            icon={Banknote}
             colorScheme="success"
             prefix="₱"
           />
