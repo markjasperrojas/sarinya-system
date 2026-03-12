@@ -101,7 +101,7 @@ export default function SalesPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-success-100 text-sm font-medium">
-                Total Revenue
+                {timeRange === "all" ? "Total" : timeRange.charAt(0).toUpperCase() + timeRange.slice(1)} Revenue
               </p>
               <p className="text-3xl sm:text-4xl font-bold mt-1">
                 ₱{overallTotal.toLocaleString()}
