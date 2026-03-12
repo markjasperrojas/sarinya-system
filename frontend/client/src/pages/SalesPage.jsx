@@ -21,7 +21,7 @@ export default function SalesPage() {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
   const [search, setSearch] = useState("");
-  const [timeRange, setTimeRange] = useState("all");
+  const [timeRange, setTimeRange] = useState("daily");
   const [selectedDate, setSelectedDate] = useState("");
   const [viewMode, setViewMode] = useState("transactions"); // "transactions" | "products"
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
