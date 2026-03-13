@@ -16,8 +16,158 @@ import {
   LayoutList,
   BarChart2,
   X,
+  PieChart as PieChartIcon,
 } from "lucide-react";
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 
+// ── Constants ────────────────────────────────────────────────────────────────
+const TOP_N = 7;
+const PIE_COLORS = [
+  "#3b82f6", // blue
+  "#22c55e", // green
+  "#a855f7", // purple
+  "#f59e0b", // amber
+  "#06b6d4", // cyan
+  "#ec4899", // pink
+  "#64748b", // slate
+  "#9ca3af", // gray — "Others"
+];
+
+// ── Pure helper ───────────────────────────────────────────────────────────────
+function buildPieData(sales, metric) {
+  if (!sales.length) return [];
+
+  const sorted = [...sales].sort((a, b) =>
+    metric === "revenue" ? b.total - a.total : b.quantity - a.quantity
+  );
+
+  const top = sorted.slice(0, TOP_N);
+  const rest = sorted.slice(TOP_N);
+  const othersValue = rest.reduce(
+    (sum, s) => sum + (metric === "revenue" ? s.total : s.quantity),
+    0
+  );
+
+  const result = top.map((s, i) => ({
+    name: s.itemName,
+    value: metric === "revenue" ? s.total : s.quantity,
+    color: PIE_COLORS[i],
+  }));
+
+  if (othersValue > 0) {
+    result.push({ name: "Others", value: othersValue, color: PIE_COLORS[7] });
+  }
+
+  return result;
+}
+
+// ── BestSellersPieChart sub-component ────────────────────────────────────────
+function BestSellersPieChart({ data, metric, onMetricChange, loading }) {
+  const total = data.reduce((sum, d) => sum + d.value, 0);
+
+  // Custom tooltip
+  const CustomTooltip = ({ active, payload }) => {
+    if (!active || !payload?.length) return null;
+    const { name, value } = payload[0].payload;
+    const pct = total > 0 ? ((value / total) * 100).toFixed(1) : "0.0";
+    return (
+      <div className="bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-sm">
+        <p className="font-semibold text-gray-800 mb-0.5">{name}</p>
+        <p className="text-gray-600">
+          {metric === "revenue" ? `₱${value.toLocaleString()}` : `${value.toLocaleString()} units`}
+        </p>
+        <p className="text-gray-400 text-xs">{pct}% of total</p>
+      </div>
+    );
+  };
+
+  // Loading skeleton
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-4">
+        <div className="w-48 h-48 rounded-full border-[24px] border-gray-200 animate-pulse" />
+        <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (!data.length) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+        <PieChartIcon className="w-12 h-12 mb-3 text-gray-300" />
+        <p className="font-medium text-gray-500">No data for this period</p>
+        <p className="text-sm mt-1">Try selecting a different time range</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Chart */}
+      <div className="relative">
+        <ResponsiveContainer width="100%" height={280}>
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={70}
+              outerRadius={110}
+              paddingAngle={2}
+              dataKey="value"
+              animationBegin={0}
+              animationDuration={600}
+            >
+              {data.map((entry, i) => (
+                <Cell key={i} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip content={<CustomTooltip />} />
+          </PieChart>
+        </ResponsiveContainer>
+
+        {/* Donut center label */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <p className="text-xs text-gray-400 font-medium">Total</p>
+          <p className="text-base font-bold text-gray-800">
+            {metric === "revenue"
+              ? `₱${total.toLocaleString()}`
+              : `${total.toLocaleString()}`}
+          </p>
+          {metric === "quantity" && (
+            <p className="text-xs text-gray-400">units</p>
+          )}
+        </div>
+      </div>
+
+      {/* Custom Legend */}
+      <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center mt-4">
+        {data.map((entry, i) => {
+          const pct = total > 0 ? ((entry.value / total) * 100).toFixed(1) : "0.0";
+          return (
+            <div key={i} className="flex items-center gap-1.5 text-sm">
+              <span
+                className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                style={{ backgroundColor: entry.color }}
+              />
+              <span className="text-gray-600 max-w-[120px] truncate" title={entry.name}>
+                {entry.name}
+              </span>
+              <span className="text-gray-400 text-xs">{pct}%</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page Component ───────────────────────────────────────────────────────
 export default function SalesPage() {
   const location = useLocation();
   const [sales, setSales] = useState([]);
@@ -28,6 +178,7 @@ export default function SalesPage() {
   const [selectedDate, setSelectedDate] = useState("");
   const [viewMode, setViewMode] = useState("products"); // "transactions" | "products"
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
+  const [chartMetric, setChartMetric] = useState("revenue");
   const { hasPermission } = useAuth();
 
   const loadSales = useCallback(
@@ -76,6 +227,9 @@ export default function SalesPage() {
       setDeletingId(null);
     }
   };
+
+  // Derived pie data — O(n), no memo needed
+  const pieData = viewMode === "products" ? buildPieData(sales, chartMetric) : [];
 
   return (
     <>
@@ -174,7 +328,7 @@ export default function SalesPage() {
 
             {/* View Mode Toggle */}
             <div className="flex items-center gap-2">
-<div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+              <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
                 <button
                   onClick={() => setViewMode("products")}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
@@ -201,6 +355,58 @@ export default function SalesPage() {
             </div>
           </div>
         </div>
+
+        {/* Best Sellers Pie Chart — only in "By Product" mode */}
+        {viewMode === "products" && (
+          <div className="card p-6 mb-6 animate-fade-in">
+            {/* Card Header */}
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: "linear-gradient(135deg, #a855f7, #7c3aed)" }}
+                >
+                  <PieChartIcon className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-gray-900">Best Sellers</h2>
+                  <p className="text-xs text-gray-500">Top {TOP_N} products for this period</p>
+                </div>
+              </div>
+
+              {/* Metric Toggle */}
+              <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+                <button
+                  onClick={() => setChartMetric("revenue")}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
+                    chartMetric === "revenue"
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  By Revenue (₱)
+                </button>
+                <button
+                  onClick={() => setChartMetric("quantity")}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
+                    chartMetric === "quantity"
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  By Quantity
+                </button>
+              </div>
+            </div>
+
+            <BestSellersPieChart
+              data={pieData}
+              metric={chartMetric}
+              onMetricChange={setChartMetric}
+              loading={loading}
+            />
+          </div>
+        )}
 
         {/* Sales Table Card */}
         <div className="card overflow-hidden animate-slide-up">
