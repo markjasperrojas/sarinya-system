@@ -70,11 +70,6 @@ export default function InventoryPage() {
   // Add modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState("");
-  const [isAddingNewProduct, setIsAddingNewProduct] = useState(false);
-  const [newProductName, setNewProductName] = useState("");
-  const [newProductPrice, setNewProductPrice] = useState("");
-  const [newProductError, setNewProductError] = useState("");
-  const [creatingProduct, setCreatingProduct] = useState(false);
   const [quantity, setQuantity] = useState("");
   const [expirationDate, setExpirationDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -147,26 +142,6 @@ export default function InventoryPage() {
   };
 
   // --- Add Item ---
-  const handleCreateProduct = async () => {
-    if (!newProductName.trim() || newProductPrice === "") return;
-    setNewProductError("");
-    setCreatingProduct(true);
-    try {
-      const data = await createProduct({ name: newProductName.trim(), price: Number(newProductPrice) });
-      const newProduct = data.product;
-      setProducts((prev) => [...prev, newProduct].sort((a, b) => a.name.localeCompare(b.name)));
-      setSelectedProductId(newProduct._id);
-      setIsAddingNewProduct(false);
-      setNewProductName("");
-      setNewProductPrice("");
-      setNewProductError("");
-    } catch (error) {
-      setNewProductError(error.response?.data?.error || "Failed to create product");
-    } finally {
-      setCreatingProduct(false);
-    }
-  };
-
   const handleAddItem = async (e) => {
     e.preventDefault();
     if (!selectedProductId || !quantity || !expirationDate) return;
@@ -174,15 +149,11 @@ export default function InventoryPage() {
     try {
       await addInventoryItem({ productId: selectedProductId, quantity, expirationDate });
       setSelectedProductId("");
-      setIsAddingNewProduct(false);
-      setNewProductName("");
-      setNewProductPrice("");
-      setNewProductError("");
       setQuantity("");
       setExpirationDate("");
       setIsModalOpen(false);
       loadItems();
-      loadProducts(); // refresh product list in case a new one was created
+      loadProducts();
     } catch (error) {
       console.error("Add item failed:", error);
     } finally {
@@ -193,10 +164,6 @@ export default function InventoryPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedProductId("");
-    setIsAddingNewProduct(false);
-    setNewProductName("");
-    setNewProductPrice("");
-    setNewProductError("");
     setQuantity("");
     setExpirationDate("");
   };
@@ -789,64 +756,6 @@ export default function InventoryPage() {
           {selectedProduct && (
             <div className="bg-primary-50 border border-primary-100 rounded-lg px-3 py-2 text-sm text-primary-700">
               Price: <strong>₱{selectedProduct.price?.toLocaleString()}</strong> — to change price, go to the Products page
-            </div>
-          )}
-
-          {/* Inline new product creation */}
-          {!isAddingNewProduct ? (
-            <button
-              type="button"
-              onClick={() => setIsAddingNewProduct(true)}
-              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-            >
-              + Create new product
-            </button>
-          ) : (
-            <div className="border border-gray-200 rounded-lg p-3 space-y-2">
-              <Input
-                label="New Product Name"
-                type="text"
-                placeholder="e.g., Pork Humba"
-                value={newProductName}
-                onChange={(e) => { setNewProductName(e.target.value); setNewProductError(""); }}
-              />
-              <Input
-                label="Price (₱)"
-                type="number"
-                placeholder="0.00"
-                value={newProductPrice}
-                onChange={(e) => { setNewProductPrice(e.target.value); setNewProductError(""); }}
-                min="0"
-                step="0.01"
-              />
-              {newProductError && (
-                <p className="text-xs text-red-600">{newProductError}</p>
-              )}
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="small"
-                  onClick={handleCreateProduct}
-                  loading={creatingProduct}
-                  disabled={!newProductName.trim() || newProductPrice === ""}
-                >
-                  Create
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="small"
-                  onClick={() => {
-                    setIsAddingNewProduct(false);
-                    setNewProductName("");
-                    setNewProductPrice("");
-                    setNewProductError("");
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
             </div>
           )}
 
