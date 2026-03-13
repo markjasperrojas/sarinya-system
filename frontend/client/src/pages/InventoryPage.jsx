@@ -514,7 +514,7 @@ export default function InventoryPage() {
             <div className="card overflow-hidden animate-fade-in">
               {loading ? (
                 <div className="p-6">
-                  <TableSkeleton rows={5} columns={5} />
+                  <TableSkeleton rows={5} columns={4} />
                 </div>
               ) : (
                 <div className="overflow-x-auto custom-scrollbar">
@@ -526,12 +526,6 @@ export default function InventoryPage() {
                           className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100"
                         >
                           <span className="flex items-center">Item Name <SortIcon col="name" /></span>
-                        </th>
-                        <th
-                          onClick={() => handleSort("price")}
-                          className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100"
-                        >
-                          <span className="flex items-center">Price <SortIcon col="price" /></span>
                         </th>
                         <th
                           onClick={() => handleSort("quantity")}
@@ -553,7 +547,7 @@ export default function InventoryPage() {
                     <tbody className="divide-y divide-gray-100">
                       {flatRows.length === 0 ? (
                         <tr>
-                          <td colSpan="5" className="px-6 py-12 text-center">
+                          <td colSpan="4" className="px-6 py-12 text-center">
                             <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                             <p className="text-gray-500 font-medium">
                               {searchTerm ? "No items match your search" : "No inventory items yet"}
@@ -586,10 +580,6 @@ export default function InventoryPage() {
                                 ) : (
                                   <span className="pl-3 text-gray-300 text-sm select-none">└</span>
                                 )}
-                              </td>
-                              {/* Price — only on first batch */}
-                              <td className="px-6 py-4 text-gray-600">
-                                {isFirst ? `₱${product.price?.toLocaleString()}` : ""}
                               </td>
                               <td className="px-6 py-4">
                                 <span
