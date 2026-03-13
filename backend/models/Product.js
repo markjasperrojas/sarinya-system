@@ -11,6 +11,10 @@ const productSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    image_url: {
+      type: String,
+      default: null,
+    },
     deletedAt: {
       type: Date,
       default: null,

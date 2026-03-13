@@ -109,7 +109,7 @@ export default function AvailableFoodsPage() {
             {filtered.map((product) => (
               <Card
                 key={product._id}
-                image={product.image}
+                image={product.image_url}
                 name={product.name}
                 price={product.price}
               />

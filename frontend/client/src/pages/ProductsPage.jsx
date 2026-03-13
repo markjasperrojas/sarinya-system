@@ -21,6 +21,7 @@ export default function ProductsPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [addName, setAddName] = useState("");
   const [addPrice, setAddPrice] = useState("");
+  const [addImageUrl, setAddImageUrl] = useState("");
   const [addError, setAddError] = useState("");
   const [adding, setAdding] = useState(false);
 
@@ -63,6 +64,7 @@ export default function ProductsPage() {
   const handleOpenAdd = () => {
     setAddName("");
     setAddPrice("");
+    setAddImageUrl("");
     setAddError("");
     setIsAddOpen(true);
   };
@@ -73,7 +75,7 @@ export default function ProductsPage() {
     if (!addName.trim() || addPrice === "") return;
     setAdding(true);
     try {
-      await createProduct({ name: addName.trim(), price: Number(addPrice) });
+      await createProduct({ name: addName.trim(), price: Number(addPrice), image_url: addImageUrl.trim() || null });
       setIsAddOpen(false);
       loadAll();
     } catch (error) {
@@ -99,6 +101,7 @@ export default function ProductsPage() {
       await updateProduct(editProduct._id, {
         name: editProduct.name.trim(),
         price: Number(editProduct.price),
+        image_url: editProduct.image_url?.trim() || null,
       });
       setIsEditOpen(false);
       loadAll();
@@ -207,7 +210,7 @@ export default function ProductsPage() {
               return (
                 <div key={product._id} className="flex flex-col">
                   <Card
-                    image={product.image}
+                    image={product.image_url}
                     name={product.name}
                     price={product.price}
                   />
@@ -268,6 +271,13 @@ export default function ProductsPage() {
             min="0"
             step="0.01"
           />
+          <Input
+            label="Image URL (optional)"
+            type="url"
+            placeholder="https://example.com/image.jpg"
+            value={addImageUrl}
+            onChange={(e) => { setAddImageUrl(e.target.value); setAddError(""); }}
+          />
           {addError && (
             <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               {addError}
@@ -303,6 +313,13 @@ export default function ProductsPage() {
               required
               min="0"
               step="0.01"
+            />
+            <Input
+              label="Image URL (optional)"
+              type="url"
+              placeholder="https://example.com/image.jpg"
+              value={editProduct.image_url || ""}
+              onChange={(e) => { setEditProduct({ ...editProduct, image_url: e.target.value }); setEditError(""); }}
             />
             {editError && (
               <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
