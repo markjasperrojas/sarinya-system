@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   getInventoryItems,
   getPullOuts,
@@ -56,7 +57,13 @@ export default function InventoryPage() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortConfig, setSortConfig] = useState({ key: "name", direction: "asc" });
+  const [searchParams] = useSearchParams();
+  const [sortConfig, setSortConfig] = useState(() => {
+    const key = searchParams.get("sort");
+    const dir = searchParams.get("dir");
+    if (key && dir) return { key, direction: dir };
+    return { key: "name", direction: "asc" };
+  });
   const [deletingId, setDeletingId] = useState(null);
 
   // Discrepancies state
@@ -368,8 +375,8 @@ export default function InventoryPage() {
       if (sortConfig.key === "price") {
         aVal = a.product.price; bVal = b.product.price;
       } else if (sortConfig.key === "quantity") {
-        aVal = a.batches.reduce((s, i) => s + i.quantity, 0);
-        bVal = b.batches.reduce((s, i) => s + i.quantity, 0);
+        aVal = Math.min(...a.batches.map((i) => i.quantity));
+        bVal = Math.min(...b.batches.map((i) => i.quantity));
       } else if (sortConfig.key === "expirationDate") {
         aVal = new Date(a.batches[0].expirationDate);
         bVal = new Date(b.batches[0].expirationDate);
@@ -382,14 +389,16 @@ export default function InventoryPage() {
       return sortConfig.direction === "asc" ? aVal - bVal : bVal - aVal;
     });
 
-    return sortedGroups.flatMap(({ product, batches }) =>
-      batches.map((item, idx) => ({
+    return sortedGroups.flatMap(({ product, batches }) => {
+      const minBatchQty = Math.min(...batches.map((i) => i.quantity));
+      return batches.map((item, idx) => ({
         item,
         product,
+        minBatchQty,
         isFirst: idx === 0,
         isLast: idx === batches.length - 1,
-      }))
-    );
+      }));
+    });
   }, [items, searchTerm, sortConfig]);
 
   const filteredPullOuts = pullOuts.filter((p) =>
@@ -531,7 +540,7 @@ export default function InventoryPage() {
                           </td>
                         </tr>
                       ) : (
-                        flatRows.map(({ item, product, isFirst }) => {
+                        flatRows.map(({ item, product, minBatchQty, isFirst }) => {
                           const isLowStock = Number(item.quantity) <= LOW_STOCK_THRESHOLD;
                           const expStatus = getExpirationStatus(item.expirationDate);
                           const daysLabel = getDaysLabel(item.expirationDate);
