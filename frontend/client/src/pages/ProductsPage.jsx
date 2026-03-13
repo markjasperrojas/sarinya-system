@@ -176,7 +176,7 @@ export default function ProductsPage() {
         <div className="card overflow-hidden animate-fade-in">
           {loading ? (
             <div className="p-6">
-              <TableSkeleton rows={5} columns={4} />
+              <TableSkeleton rows={5} columns={3} />
             </div>
           ) : (
             <div className="overflow-x-auto custom-scrollbar">
@@ -188,9 +188,6 @@ export default function ProductsPage() {
                     </th>
                     <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
                       Price
-                    </th>
-                    <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                      Stock
                     </th>
                     <th className="text-center px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
                       Actions
@@ -207,19 +204,6 @@ export default function ProductsPage() {
                         </td>
                         <td className="px-6 py-4 text-gray-700 font-medium">
                           ₱{product.price?.toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
-                              stock === 0
-                                ? "bg-gray-100 text-gray-500"
-                                : stock <= 5
-                                ? "bg-warning-100 text-warning-800"
-                                : "bg-success-100 text-success-800"
-                            }`}
-                          >
-                            {stock}
-                          </span>
                         </td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex items-center justify-center gap-2">
@@ -254,7 +238,7 @@ export default function ProductsPage() {
 
                   {filteredProducts.length === 0 && !loading && (
                     <tr>
-                      <td colSpan="4" className="px-6 py-12 text-center">
+                      <td colSpan="3" className="px-6 py-12 text-center">
                         <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                         <p className="text-gray-500 font-medium">
                           {searchTerm ? "No products match your search" : "No products yet"}
