@@ -1,4 +1,8 @@
+const mongoose = require("mongoose");
+const { randomUUID } = require("crypto");
 const Sale = require("../models/Sale");
+const Inventory = require("../models/Inventory");
+const Product = require("../models/Product");
 const logActivity = require("../utils/activityLogger");
 
 // CREATE SALE
@@ -216,6 +220,95 @@ exports.getAvailableYears = async (req, res) => {
     res.json(years);
   } catch (error) {
     res.status(500).json({ error: "Get available years failed" });
+  }
+};
+
+// BULK SELL (multi-sell POS)
+exports.bulkSell = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { items } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: "No items provided" });
+    }
+
+    const saleSessionId = randomUUID();
+    const deductions = [];
+
+    // --- Validate ALL items first, collect deductions (FEFO) ---
+    for (const item of items) {
+      const { productId, quantity } = item;
+
+      if (!productId || !quantity || quantity <= 0) {
+        throw new Error("Invalid item data");
+      }
+
+      const product = await Product.findOne({ _id: productId, deletedAt: null }).session(session);
+      if (!product) throw new Error(`Product not found`);
+
+      // FEFO: earliest-expiring batches first
+      const batches = await Inventory.find({
+        product: productId,
+        status: { $ne: "pulled_out" },
+        quantity: { $gt: 0 },
+        deletedAt: null,
+      })
+        .sort({ expirationDate: 1 })
+        .session(session);
+
+      const totalAvailable = batches.reduce((sum, b) => sum + b.quantity, 0);
+      if (totalAvailable < quantity) {
+        throw new Error(
+          `Not enough stock for "${product.name}". Available: ${totalAvailable}, requested: ${quantity}`
+        );
+      }
+
+      // Assign across batches in FEFO order
+      let remaining = quantity;
+      for (const batch of batches) {
+        if (remaining <= 0) break;
+        const take = Math.min(batch.quantity, remaining);
+        deductions.push({ batch, product, take });
+        remaining -= take;
+      }
+    }
+
+    // --- Apply deductions and create Sale records ---
+    const createdSales = [];
+    for (const { batch, product, take } of deductions) {
+      batch.quantity -= take;
+      batch.updatedAt = new Date();
+      await batch.save({ session });
+
+      const sale = new Sale({
+        itemName: product.name,
+        product: product._id,
+        inventoryItemId: batch._id,
+        quantity: take,
+        price: product.price,
+        saleSessionId,
+      });
+      await sale.save({ session });
+      createdSales.push(sale);
+    }
+
+    await session.commitTransaction();
+
+    logActivity({
+      userId: req.user.id,
+      action: "sell",
+      module: "sales",
+      description: `Multi-sell: ${items.length} product(s), session ${saleSessionId}`,
+    });
+
+    res.json({ message: "Sale processed!", sales: createdSales, saleSessionId });
+  } catch (error) {
+    await session.abortTransaction();
+    res.status(400).json({ error: error.message || "Bulk sell failed" });
+  } finally {
+    session.endSession();
   }
 };
 

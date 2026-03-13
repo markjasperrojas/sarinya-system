@@ -11,6 +11,7 @@ import UserManagementPage from "./pages/UserManagementPage";
 import ActivityLogsPage from "./pages/ActivityLogsPage";
 import ProductsPage from "./pages/ProductsPage";
 import AvailableFoodsPage from "./pages/AvailableFoodsPage";
+import SellPage from "./pages/SellPage";
 
 function App() {
   return (
@@ -24,6 +25,18 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <AvailableFoodsPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sell"
+            element={
+              <ProtectedRoute
+                requiredPermission={{ module: "sales", action: "add" }}
+              >
+                <Layout>
+                  <SellPage />
                 </Layout>
               </ProtectedRoute>
             }

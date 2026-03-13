@@ -41,3 +41,9 @@ export const pullOutInventoryItem = async (id, data) => {
   const res = await API.post(`/inventory/${id}/pullout`, data);
   return res.data;
 };
+
+// BULK SELL (multi-sell POS)
+export const bulkSell = async (items) => {
+  const res = await API.post("/sales/bulk-sell", { items });
+  return res.data;
+};

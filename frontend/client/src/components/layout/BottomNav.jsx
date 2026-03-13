@@ -10,6 +10,7 @@ import {
   Shield,
   User,
   LogOut,
+  Utensils,
 } from "lucide-react";
 
 export default function BottomNav() {
@@ -50,6 +51,15 @@ export default function BottomNav() {
           label="Dashboard"
           variant="bottom"
         />
+
+        {hasPermission("sales", "add") && (
+          <NavItem
+            to="/sell"
+            icon={Utensils}
+            label="Sell"
+            variant="bottom"
+          />
+        )}
 
         {hasPermission("inventory", "view") && (
           <NavItem

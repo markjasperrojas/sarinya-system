@@ -30,6 +30,10 @@ const saleSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    saleSessionId: {
+      type: String,
+      default: null,
+    },
   },
   { toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
