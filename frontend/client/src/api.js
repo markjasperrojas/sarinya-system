@@ -20,4 +20,23 @@ export const setAuthToken = (token) => {
   }
 };
 
+// Catch 401 responses from non-login requests, clear auth, and redirect to login
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const isLoginRequest = error.config?.url?.includes('/auth/login');
+    if (error.response?.status === 401 && !isLoginRequest) {
+      localStorage.removeItem('sarinya_token');
+      localStorage.removeItem('sarinya_user');
+      delete API.defaults.headers.common['Authorization'];
+
+      const currentPath = window.location.pathname + window.location.search;
+      if (currentPath !== '/') {
+        window.location.href = `/?redirect=${encodeURIComponent(currentPath)}`;
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default API;

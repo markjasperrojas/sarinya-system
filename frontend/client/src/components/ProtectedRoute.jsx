@@ -1,4 +1,4 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import LoadingSpinner from "./LoadingSpinner";
 
@@ -9,6 +9,7 @@ export default function ProtectedRoute({
   redirectTo = "/",
 }) {
   const { user, loading, hasPermission, isAdmin } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -20,7 +21,7 @@ export default function ProtectedRoute({
 
   // Not authenticated
   if (!user) {
-    return <Navigate to={redirectTo} replace />;
+    return <Navigate to={redirectTo} state={{ from: location.pathname + location.search }} replace />;
   }
 
   // Check required role

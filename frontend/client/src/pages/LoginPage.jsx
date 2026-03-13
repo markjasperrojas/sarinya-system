@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import API from "../api";
 import { User, Lock, AlertCircle, ChefHat } from "lucide-react";
@@ -12,12 +12,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, user } = useAuth();
+
+  const params = new URLSearchParams(location.search);
+  const from = location.state?.from || params.get('redirect') || '/dashboard';
 
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      navigate("/dashboard");
+      navigate(from, { replace: true });
     }
   }, [user, navigate]);
 
@@ -31,7 +35,7 @@ export default function LoginPage() {
       const { token, user: userData } = res.data;
       login(userData, token);
 
-      navigate("/dashboard");
+      navigate(from, { replace: true });
     } catch (err) {
       console.error("Login error:", err);
       const msg =
