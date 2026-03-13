@@ -9,6 +9,7 @@ import {
   ShoppingCart,
   Shield,
   LogOut,
+  Utensils,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -35,6 +36,8 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+        <NavItem to="/available-foods" icon={Utensils} label="Available Foods" />
+
         <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
 
         {hasPermission("inventory", "view") && (
