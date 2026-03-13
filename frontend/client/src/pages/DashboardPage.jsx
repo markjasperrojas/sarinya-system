@@ -172,7 +172,7 @@ function RevenueChart({ data, selectedYear, onYearChange, minYear, selectedMonth
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
-  const [inventoryCount, setInventoryCount] = useState(0);
+  const [productCount, setProductCount] = useState(0);
   const [lowStockCount, setLowStockCount] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [monthlyRevenue, setMonthlyRevenue] = useState([]);
@@ -217,15 +217,17 @@ export default function DashboardPage() {
     setLoading(true);
 
     try {
-      const [invRes, salesRes] = await Promise.all([
+      const [invRes, salesRes, productsRes] = await Promise.all([
         API.get("/inventory"),
         API.get("/sales", { params: { timeRange: "monthly" } }),
+        API.get("/products"),
       ]);
 
       const items = Array.isArray(invRes.data) ? invRes.data : [];
       const sales = Array.isArray(salesRes.data?.sales) ? salesRes.data.sales : [];
+      const products = Array.isArray(productsRes.data) ? productsRes.data : [];
 
-      setInventoryCount(items.length);
+      setProductCount(products.length);
 
       const low = items.filter(
         (it) => Number(it.quantity) <= LOW_STOCK_THRESHOLD,
@@ -303,11 +305,11 @@ export default function DashboardPage() {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 animate-fade-in">
           <StatsCard
-            title="Total Inventory Items"
-            value={inventoryCount}
+            title="Total Products"
+            value={productCount}
             icon={Package}
             colorScheme="primary"
-            onClick={() => navigate("/inventory")}
+            onClick={() => navigate("/products")}
           />
 
           <StatsCard

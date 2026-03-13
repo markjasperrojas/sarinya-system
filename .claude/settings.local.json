@@ -9,7 +9,8 @@
       "Bash(find /c/Users/MICHAEL/sarinya-system/frontend/client/src -type f \\\\\\( -name \"*.jsx\" -o -name \"*.js\" \\\\\\) | xargs grep -l \"sort\\\\|filter\\\\|table\" 2>/dev/null | head -15)",
       "Bash(find \"C:\\\\Users\\\\MICHAEL\\\\sarinya-system\" -type f -name \".env*\" 2>/dev/null | head -20)",
       "Bash(find /c/Users/MICHAEL/sarinya-system/frontend -type f -name \"*roduct*\" 2>/dev/null | head -20)",
-      "Bash(find /c/Users/MICHAEL/sarinya-system/frontend/client/src -type f \\\\\\( -name \"*.js\" -o -name \"*.jsx\" \\\\\\) | xargs grep -l \"interceptor\\\\|401\\\\|403\\\\|catch.*error\" | head -10)"
+      "Bash(find /c/Users/MICHAEL/sarinya-system/frontend/client/src -type f \\\\\\( -name \"*.js\" -o -name \"*.jsx\" \\\\\\) | xargs grep -l \"interceptor\\\\|401\\\\|403\\\\|catch.*error\" | head -10)",
+      "Bash(find /c/Users/MICHAEL/sarinya-system/frontend/client/src -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\) 2>/dev/null | head -100)"
     ]
   }
 }
