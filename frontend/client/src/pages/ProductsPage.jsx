@@ -5,7 +5,7 @@ import Modal from "../components/Modal";
 import Button from "../components/Button";
 import Input from "../components/Input";
 import TableSkeleton from "../components/TableSkeleton";
-import { Plus, Tag, Pencil, Trash2, Search, Package } from "lucide-react";
+import { Plus, Tag, Pencil, Trash2, Search, Package, X } from "lucide-react";
 import API from "../api";
 
 export default function ProductsPage() {
@@ -168,8 +168,13 @@ export default function ProductsPage() {
               placeholder="Search products..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all"
+              className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all"
             />
+            {searchTerm && (
+              <button onClick={() => setSearchTerm("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
