@@ -34,6 +34,10 @@ const inventorySchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  deletedAt: {
+    type: Date,
+    default: null,
+  },
 });
 
 module.exports = mongoose.model("Inventory", inventorySchema);

@@ -27,7 +27,7 @@ exports.addSale = async (req, res) => {
 exports.getSales = async (req, res) => {
   try {
     const { search, timeRange, date, page = 1, limit = 20, grouped } = req.query;
-    let query = {};
+    let query = { deletedAt: null };
 
     // Search filter
     if (search) {
@@ -146,7 +146,7 @@ exports.getMonthlySales = async (req, res) => {
     const endDate = new Date(year, 11, 31, 23, 59, 59, 999);
 
     const result = await Sale.aggregate([
-      { $match: { date: { $gte: startDate, $lte: endDate } } },
+      { $match: { date: { $gte: startDate, $lte: endDate }, deletedAt: null } },
       { $group: { _id: { $month: "$date" }, revenue: { $sum: { $multiply: ["$quantity", "$price"] } } } },
       { $sort: { _id: 1 } },
     ]);
@@ -178,7 +178,7 @@ exports.getDailySales = async (req, res) => {
     const endDate   = new Date(year, clampedMonth, 0, 23, 59, 59, 999);
 
     const result = await Sale.aggregate([
-      { $match: { date: { $gte: startDate, $lte: endDate } } },
+      { $match: { date: { $gte: startDate, $lte: endDate }, deletedAt: null } },
       {
         $group: {
           _id: { $dayOfMonth: "$date" },
@@ -208,6 +208,7 @@ exports.getDailySales = async (req, res) => {
 exports.getAvailableYears = async (req, res) => {
   try {
     const result = await Sale.aggregate([
+      { $match: { deletedAt: null } },
       { $group: { _id: { $year: "$date" } } },
       { $sort: { _id: 1 } },
     ]);
@@ -218,17 +219,18 @@ exports.getAvailableYears = async (req, res) => {
   }
 };
 
-// DELETE SALE
+// DELETE SALE (soft)
 exports.deleteSale = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const sale = await Sale.findById(id);
+    const sale = await Sale.findOne({ _id: id, deletedAt: null });
     if (!sale) {
       return res.status(404).json({ error: "Sale not found" });
     }
 
-    await Sale.findByIdAndDelete(id);
+    sale.deletedAt = new Date();
+    await sale.save();
 
     logActivity({
       userId: req.user.id,

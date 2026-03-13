@@ -1,10 +1,11 @@
 const Product = require("../models/Product");
 const Inventory = require("../models/Inventory");
+const logActivity = require("../utils/activityLogger");
 
 // GET all products
 exports.getProducts = async (req, res) => {
   try {
-    const products = await Product.find().sort({ name: 1 }).collation({ locale: "en", strength: 2 });
+    const products = await Product.find({ deletedAt: null }).sort({ name: 1 }).collation({ locale: "en", strength: 2 });
     res.json(products);
   } catch (error) {
     res.status(500).json({ error: "Get products failed" });
@@ -20,7 +21,7 @@ exports.addProduct = async (req, res) => {
     if (price === undefined || price === null || price === "") return res.status(400).json({ error: "Price is required" });
     if (Number(price) < 0) return res.status(400).json({ error: "Price cannot be negative" });
 
-    const existing = await Product.findOne({ name: name.trim() }).collation({ locale: "en", strength: 2 });
+    const existing = await Product.findOne({ name: name.trim(), deletedAt: null }).collation({ locale: "en", strength: 2 });
     if (existing) return res.status(400).json({ error: "A product with this name already exists" });
 
     const product = new Product({ name: name.trim(), price: Number(price) });
@@ -38,12 +39,12 @@ exports.updateProduct = async (req, res) => {
     const { name, price } = req.body;
 
     if (name) {
-      const existing = await Product.findOne({ name: name.trim(), _id: { $ne: id } }).collation({ locale: "en", strength: 2 });
+      const existing = await Product.findOne({ name: name.trim(), _id: { $ne: id }, deletedAt: null }).collation({ locale: "en", strength: 2 });
       if (existing) return res.status(400).json({ error: "A product with this name already exists" });
     }
 
-    const product = await Product.findByIdAndUpdate(
-      id,
+    const product = await Product.findOneAndUpdate(
+      { _id: id, deletedAt: null },
       { name: name?.trim(), price: price !== undefined ? Number(price) : undefined },
       { new: true, omitUndefined: true }
     );
@@ -54,18 +55,37 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
-// DELETE product
+// DELETE product (soft)
 exports.deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
+
     // Only block if there is real active stock remaining
-    const activeStock = await Inventory.countDocuments({ product: id, status: "active", quantity: { $gt: 0 } });
+    const activeStock = await Inventory.countDocuments({ product: id, status: "active", quantity: { $gt: 0 }, deletedAt: null });
     if (activeStock > 0) {
       return res.status(400).json({ error: "Cannot delete a product that has existing inventory batches" });
     }
-    // Clean up orphaned inventory records (zero-qty or pulled-out) before deleting the product
-    await Inventory.deleteMany({ product: id });
-    await Product.findByIdAndDelete(id);
+
+    const product = await Product.findOne({ _id: id, deletedAt: null });
+    if (!product) return res.status(404).json({ error: "Product not found" });
+
+    const now = new Date();
+
+    // Soft-delete orphaned inventory records (zero-qty or pulled-out)
+    await Inventory.updateMany({ product: id, deletedAt: null }, { $set: { deletedAt: now } });
+
+    // Soft-delete the product
+    product.deletedAt = now;
+    await product.save();
+
+    logActivity({
+      userId: req.user.id,
+      action: "delete",
+      module: "inventory",
+      description: `Deleted product '${product.name}'`,
+      targetId: product._id,
+    });
+
     res.json({ message: "Product deleted!" });
   } catch (error) {
     res.status(500).json({ error: "Delete product failed" });

@@ -11,10 +11,16 @@ const productSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );
 
-productSchema.index({ name: 1 }, { unique: true, collation: { locale: "en", strength: 2 } });
+// Uniqueness is enforced at the application level so that soft-deleted
+// product names do not block re-creation of the same name.
+productSchema.index({ name: 1 }, { collation: { locale: "en", strength: 2 } });
 
 module.exports = mongoose.model("Product", productSchema);

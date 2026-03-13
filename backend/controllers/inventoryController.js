@@ -24,6 +24,7 @@ exports.addItem = async (req, res) => {
       product: productId,
       status: { $ne: "pulled_out" },
       expirationDate: { $gte: startOfDay, $lte: endOfDay },
+      deletedAt: null,
     });
 
     if (existingBatch) {
@@ -64,7 +65,7 @@ exports.addItem = async (req, res) => {
 // READ ALL (active items only)
 exports.getItems = async (req, res) => {
   try {
-    const items = await Inventory.find({ status: { $ne: "pulled_out" } })
+    const items = await Inventory.find({ status: { $ne: "pulled_out" }, deletedAt: null })
       .populate("product", "name price")
       .sort({ updatedAt: -1 });
     res.json(items);
@@ -100,15 +101,16 @@ exports.updateItem = async (req, res) => {
   }
 };
 
-// DELETE
+// DELETE (soft)
 exports.deleteItem = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const item = await Inventory.findById(id).populate("product", "name");
+    const item = await Inventory.findOne({ _id: id, deletedAt: null }).populate("product", "name");
     if (!item) return res.status(404).json({ error: "Item not found" });
 
-    await Inventory.findByIdAndDelete(id);
+    item.deletedAt = new Date();
+    await item.save();
 
     logActivity({
       userId: req.user.id,

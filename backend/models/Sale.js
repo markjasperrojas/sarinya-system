@@ -26,6 +26,10 @@ const saleSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
   },
   { toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );

@@ -22,7 +22,7 @@ exports.getDefaultPermissions = (req, res) => {
 // Get all users
 exports.getUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password").sort({ createdAt: -1 });
+    const users = await User.find({ deletedAt: null }).select("-password").sort({ createdAt: -1 });
     res.json(users);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch users" });
@@ -32,7 +32,7 @@ exports.getUsers = async (req, res) => {
 // Get single user by ID
 exports.getUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select("-password");
+    const user = await User.findOne({ _id: req.params.id, deletedAt: null }).select("-password");
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -64,8 +64,8 @@ exports.createUser = async (req, res) => {
   try {
     const { username, password, role, permissions, isActive } = req.body;
 
-    // Check if username already exists
-    const existingUser = await User.findOne({ username });
+    // Check if username already exists (among non-deleted users)
+    const existingUser = await User.findOne({ username, deletedAt: null });
     if (existingUser) {
       return res.status(400).json({ error: "Username already exists" });
     }
@@ -112,7 +112,7 @@ exports.updateUser = async (req, res) => {
   try {
     const { username, password, role, permissions, isActive } = req.body;
 
-    const user = await User.findById(req.params.id);
+    const user = await User.findOne({ _id: req.params.id, deletedAt: null });
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -120,9 +120,9 @@ exports.updateUser = async (req, res) => {
 
     const wasActive = user.isActive;
 
-    // Check if username is being changed and if it's already taken
+    // Check if username is being changed and if it's already taken (among non-deleted users)
     if (username && username !== user.username) {
-      const existingUser = await User.findOne({ username });
+      const existingUser = await User.findOne({ username, deletedAt: null });
       if (existingUser) {
         return res.status(400).json({ error: "Username already exists" });
       }
@@ -183,7 +183,7 @@ exports.updateUser = async (req, res) => {
   }
 };
 
-// Delete user
+// Delete user (soft)
 exports.deleteUser = async (req, res) => {
   try {
     // Prevent self-deletion
@@ -191,13 +191,15 @@ exports.deleteUser = async (req, res) => {
       return res.status(400).json({ error: "Cannot delete your own account" });
     }
 
-    const user = await User.findById(req.params.id);
+    const user = await User.findOne({ _id: req.params.id, deletedAt: null });
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    await User.findByIdAndDelete(req.params.id);
+    user.deletedAt = new Date();
+    user.isActive = false;
+    await user.save();
 
     logActivity({
       userId: req.user.id,
