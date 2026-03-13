@@ -26,7 +26,7 @@ export default function SalesPage() {
   const [search, setSearch] = useState("");
   const [timeRange, setTimeRange] = useState(location.state?.timeRange ?? "daily");
   const [selectedDate, setSelectedDate] = useState("");
-  const [viewMode, setViewMode] = useState("transactions"); // "transactions" | "products"
+  const [viewMode, setViewMode] = useState("products"); // "transactions" | "products"
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
   const { hasPermission } = useAuth();
 
@@ -174,19 +174,7 @@ export default function SalesPage() {
 
             {/* View Mode Toggle */}
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500 hidden sm:inline">View:</span>
-              <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
-                <button
-                  onClick={() => setViewMode("transactions")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                    viewMode === "transactions"
-                      ? "bg-white text-gray-900 shadow-sm"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  <LayoutList className="w-4 h-4" />
-                  Transactions
-                </button>
+<div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
                 <button
                   onClick={() => setViewMode("products")}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
@@ -197,6 +185,17 @@ export default function SalesPage() {
                 >
                   <BarChart2 className="w-4 h-4" />
                   By Product
+                </button>
+                <button
+                  onClick={() => setViewMode("transactions")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    viewMode === "transactions"
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <LayoutList className="w-4 h-4" />
+                  Transactions
                 </button>
               </div>
             </div>
