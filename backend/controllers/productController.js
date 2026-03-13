@@ -58,10 +58,13 @@ exports.updateProduct = async (req, res) => {
 exports.deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const inventoryCount = await Inventory.countDocuments({ product: id });
-    if (inventoryCount > 0) {
+    // Only block if there is real active stock remaining
+    const activeStock = await Inventory.countDocuments({ product: id, status: "active", quantity: { $gt: 0 } });
+    if (activeStock > 0) {
       return res.status(400).json({ error: "Cannot delete a product that has existing inventory batches" });
     }
+    // Clean up orphaned inventory records (zero-qty or pulled-out) before deleting the product
+    await Inventory.deleteMany({ product: id });
     await Product.findByIdAndDelete(id);
     res.json({ message: "Product deleted!" });
   } catch (error) {
