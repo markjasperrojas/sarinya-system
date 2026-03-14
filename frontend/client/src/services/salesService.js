@@ -10,8 +10,8 @@ export const getSessionDetail = async (sessionId) => {
   return res.data;
 };
 
-export const addItemsToSession = async (sessionId, items) => {
-  const res = await API.post(`/sales/sessions/${sessionId}/add-items`, { items });
+export const addItemsToSession = async (sessionId, items, notes) => {
+  const res = await API.post(`/sales/sessions/${sessionId}/add-items`, { items, notes });
   return res.data;
 };
 

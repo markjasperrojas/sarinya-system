@@ -259,7 +259,7 @@ async function buildDeductions(items, mongoSession) {
 }
 
 // Applies deductions and creates Sale records for a given saleSessionId
-async function applyDeductions(deductions, saleSessionId, mongoSession) {
+async function applyDeductions(deductions, saleSessionId, notes, mongoSession) {
   const createdSales = [];
   for (const { batch, product, take } of deductions) {
     batch.quantity -= take;
@@ -272,6 +272,7 @@ async function applyDeductions(deductions, saleSessionId, mongoSession) {
       quantity: take,
       price: product.price,
       saleSessionId,
+      notes: notes || "",
     });
     await sale.save({ session: mongoSession });
     createdSales.push(sale);
@@ -284,7 +285,7 @@ exports.bulkSell = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { items } = req.body;
+    const { items, notes } = req.body;
 
     if (!Array.isArray(items) || items.length === 0) {
       throw new AppError("No items provided", 400);
@@ -292,7 +293,7 @@ exports.bulkSell = async (req, res) => {
 
     const saleSessionId = randomUUID();
     const deductions = await buildDeductions(items, session);
-    const createdSales = await applyDeductions(deductions, saleSessionId, session);
+    const createdSales = await applyDeductions(deductions, saleSessionId, notes, session);
 
     await session.commitTransaction();
 
@@ -337,6 +338,7 @@ exports.getRecentSessions = async (req, res) => {
         _id: "$saleSessionId",
         createdAt: { $min: "$date" },
         total: { $sum: { $multiply: ["$quantity", "$price"] } },
+        notes: { $first: "$notes" },
         items: {
           $push: {
             productId: "$product",
@@ -363,23 +365,38 @@ exports.getSessionDetail = async (req, res) => {
   res.json({ saleSessionId: sessionId, sales });
 };
 
-// ADD ITEMS TO EXISTING SESSION
+// ADD ITEMS TO EXISTING SESSION (also handles notes-only update)
 exports.addItemsToSession = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
     const { sessionId } = req.params;
-    const { items } = req.body;
+    const { items, notes } = req.body;
 
-    if (!Array.isArray(items) || items.length === 0) {
-      throw new AppError("No items provided", 400);
+    const hasItems = Array.isArray(items) && items.length > 0;
+    const hasNotes = typeof notes === "string";
+
+    if (!hasItems && !hasNotes) {
+      throw new AppError("No items or notes provided", 400);
     }
 
     const existing = await Sale.findOne({ saleSessionId: sessionId, deletedAt: null }).session(session);
     if (!existing) throw new AppError("Session not found", 404);
 
-    const deductions = await buildDeductions(items, session);
-    const createdSales = await applyDeductions(deductions, sessionId, session);
+    // Update notes on all existing records in this session if notes provided
+    if (hasNotes) {
+      await Sale.updateMany(
+        { saleSessionId: sessionId, deletedAt: null },
+        { $set: { notes } },
+        { session }
+      );
+    }
+
+    let createdSales = [];
+    if (hasItems) {
+      const deductions = await buildDeductions(items, session);
+      createdSales = await applyDeductions(deductions, sessionId, hasNotes ? notes : existing.notes, session);
+    }
 
     await session.commitTransaction();
 
@@ -387,10 +404,10 @@ exports.addItemsToSession = async (req, res) => {
       userId: req.user.id,
       action: "edit",
       module: "sales",
-      description: `Added ${items.length} item(s) to session ${sessionId}`,
+      description: `Updated session ${sessionId}${hasItems ? `: added ${items.length} item(s)` : ""}${hasNotes ? " (notes updated)" : ""}`,
     });
 
-    res.json({ message: "Items added to order!", sales: createdSales });
+    res.json({ message: "Order updated!", sales: createdSales });
   } catch (error) {
     await session.abortTransaction();
     throw error;

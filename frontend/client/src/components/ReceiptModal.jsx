@@ -5,6 +5,7 @@ import { getSessionDetail } from "../services/salesService";
 
 export default function ReceiptModal({ isOpen, onClose, sessionId }) {
   const [sales, setSales] = useState([]);
+  const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function ReceiptModal({ isOpen, onClose, sessionId }) {
           }
         });
         setSales(Object.values(map));
+        setNotes(data.sales[0]?.notes || "");
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -60,6 +62,13 @@ export default function ReceiptModal({ isOpen, onClose, sessionId }) {
               </div>
             ))}
           </div>
+
+          {notes && (
+            <div className="border-t border-gray-100 pt-3 pb-1">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Note</p>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">{notes}</p>
+            </div>
+          )}
 
           <div className="border-t border-gray-200 pt-3 flex items-center justify-between">
             <span className="font-semibold text-gray-700">Total</span>

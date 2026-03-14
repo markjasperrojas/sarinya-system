@@ -43,7 +43,7 @@ export const pullOutInventoryItem = async (id, data) => {
 };
 
 // BULK SELL (multi-sell POS)
-export const bulkSell = async (items) => {
-  const res = await API.post("/sales/bulk-sell", { items });
+export const bulkSell = async (items, notes) => {
+  const res = await API.post("/sales/bulk-sell", { items, notes: notes || "" });
   return res.data;
 };

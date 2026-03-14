@@ -44,6 +44,9 @@ export default function SellPage() {
   const [showRecentPanel, setShowRecentPanel] = useState(false); // desktop toggle
   const [showRecentSheet, setShowRecentSheet] = useState(false); // mobile sheet
 
+  // Notes state
+  const [orderNotes, setOrderNotes] = useState("");
+
   // Receipt state
   const [receiptSessionId, setReceiptSessionId] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
@@ -109,7 +112,10 @@ export default function SellPage() {
     });
   };
 
-  const handleClear = () => setOrderItems({});
+  const handleClear = () => {
+    setOrderItems({});
+    setOrderNotes("");
+  };
 
   // ── New order ─────────────────────────────────────────────────────────────
 
@@ -122,8 +128,9 @@ export default function SellPage() {
 
     setProcessing(true);
     try {
-      const data = await bulkSell(items);
+      const data = await bulkSell(items, orderNotes);
       setOrderItems({});
+      setOrderNotes("");
       setShowOrderSheet(false);
       setReceiptSessionId(data.saleSessionId);
       await loadData();
@@ -143,6 +150,7 @@ export default function SellPage() {
       const data = await getSessionDetail(session._id);
       setEditingSessionId(session._id);
       setSessionSales(data.sales);
+      setOrderNotes(data.sales[0]?.notes || "");
       setOrderItems({});
       setShowRecentPanel(false);
       setShowRecentSheet(false);
@@ -156,6 +164,7 @@ export default function SellPage() {
     setEditingSessionId(null);
     setSessionSales([]);
     setOrderItems({});
+    setOrderNotes("");
   };
 
   const handleRemoveSessionItem = async (saleIds) => {
@@ -176,8 +185,12 @@ export default function SellPage() {
       quantity,
     }));
 
-    if (newItems.length === 0 && sessionSales.length > 0) {
-      // Nothing new to add — just exit edit mode
+    const existingNotes = sessionSales[0]?.notes || "";
+    const notesChanged = orderNotes !== existingNotes;
+    const hasNewItems = newItems.length > 0;
+
+    if (!hasNewItems && !notesChanged && sessionSales.length > 0) {
+      // Nothing changed — just exit edit mode
       handleExitEditMode();
       setShowOrderSheet(false);
       setSuccessMsg("Order updated!");
@@ -185,11 +198,15 @@ export default function SellPage() {
       return;
     }
 
-    if (newItems.length === 0) return;
+    if (!hasNewItems && sessionSales.length === 0) return;
 
     setProcessing(true);
     try {
-      await addItemsToSession(editingSessionId, newItems);
+      await addItemsToSession(
+        editingSessionId,
+        hasNewItems ? newItems : [],
+        notesChanged ? orderNotes : undefined
+      );
       const sid = editingSessionId;
       handleExitEditMode();
       setShowOrderSheet(false);
@@ -347,6 +364,11 @@ export default function SellPage() {
                 {preview}
                 {more}
               </p>
+              {s.notes && (
+                <p className="text-xs text-amber-600 truncate mt-0.5 italic">
+                  {s.notes}
+                </p>
+              )}
             </button>
           );
         })}
@@ -656,6 +678,15 @@ export default function SellPage() {
               </span>
             </div>
 
+            {/* Order notes */}
+            <textarea
+              value={orderNotes}
+              onChange={(e) => setOrderNotes(e.target.value)}
+              placeholder="Add a note (e.g. no spice, extra rice...)"
+              rows={2}
+              className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg resize-none focus:border-primary-400 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all text-gray-700 placeholder-gray-400"
+            />
+
             {successMsg && (
               <div className="flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-sm font-medium">
                 <CheckCircle className="w-4 h-4 flex-shrink-0" />
@@ -830,6 +861,14 @@ export default function SellPage() {
                   ₱{(editingSessionId ? combinedTotal : newItemsTotal).toLocaleString()}
                 </span>
               </div>
+              {/* Order notes */}
+              <textarea
+                value={orderNotes}
+                onChange={(e) => setOrderNotes(e.target.value)}
+                placeholder="Add a note (e.g. no spice, extra rice...)"
+                rows={2}
+                className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg resize-none focus:border-primary-400 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all text-gray-700 placeholder-gray-400"
+              />
               {editingSessionId ? (
                 <button
                   onClick={handleUpdateOrder}

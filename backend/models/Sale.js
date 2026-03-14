@@ -31,6 +31,10 @@ const saleSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    notes: {
+      type: String,
+      default: "",
+    },
   },
   { toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
