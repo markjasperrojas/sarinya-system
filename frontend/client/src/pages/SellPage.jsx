@@ -113,9 +113,13 @@ export default function SellPage() {
   );
   const orderCount = Object.values(orderItems).reduce((sum, q) => sum + q, 0);
 
-  const filtered = products.filter((p) =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = products
+    .filter((p) => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => {
+      const aInStock = (stockCounts[a._id] || 0) > 0 ? 0 : 1;
+      const bInStock = (stockCounts[b._id] || 0) > 0 ? 0 : 1;
+      return aInStock - bInStock;
+    });
 
   // Shared order rows JSX (used in both desktop panel and mobile sheet)
   const OrderRows = () =>
