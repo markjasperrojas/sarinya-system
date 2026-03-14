@@ -187,7 +187,7 @@ export default function SalesPage() {
       try {
         const params = { page, limit: 20 };
         if (search) params.search = search;
-        if (timeRange !== "all") params.timeRange = timeRange;
+        params.timeRange = timeRange;
         if (selectedDate) params.date = selectedDate;
         if (viewMode === "products") params.grouped = "true";
 
@@ -307,7 +307,7 @@ export default function SalesPage() {
                   className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-sm text-gray-600"
                 />
 
-                {["all", "daily", "weekly", "monthly", "yearly"].map((range) => (
+                {["daily", "weekly", "monthly", "yearly"].map((range) => (
                   <button
                     key={range}
                     onClick={() => {

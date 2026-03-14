@@ -11,7 +11,8 @@
       "Bash(find /c/Users/MICHAEL/sarinya-system/frontend -type f -name \"*roduct*\" 2>/dev/null | head -20)",
       "Bash(find /c/Users/MICHAEL/sarinya-system/frontend/client/src -type f \\\\\\( -name \"*.js\" -o -name \"*.jsx\" \\\\\\) | xargs grep -l \"interceptor\\\\|401\\\\|403\\\\|catch.*error\" | head -10)",
       "Bash(find /c/Users/MICHAEL/sarinya-system/frontend/client/src -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\) 2>/dev/null | head -100)",
-      "Bash(grep -r \"chart\\\\|Chart\\\\|recharts\\\\|graph\\\\|Graph\" /c/Users/MICHAEL/sarinya-system/frontend/client/src --include=\"*.jsx\" --include=\"*.js\" 2>/dev/null | head -20)"
+      "Bash(grep -r \"chart\\\\|Chart\\\\|recharts\\\\|graph\\\\|Graph\" /c/Users/MICHAEL/sarinya-system/frontend/client/src --include=\"*.jsx\" --include=\"*.js\" 2>/dev/null | head -20)",
+      "Bash(find /c/Users/MICHAEL/sarinya-system -type f -name \"*sales*\" 2>/dev/null | head -20)"
     ]
   }
 }
