@@ -141,7 +141,6 @@ exports.sellItem = async (req, res) => {
     const price = item.product.price;
 
     const sale = new Sale({
-      itemName: item.product.name,
       product: item.product._id,
       inventoryItemId: item._id,
       quantity,
@@ -211,7 +210,6 @@ exports.pullOutItem = async (req, res) => {
     const pullOut = new PullOut({
       inventoryItemId: item._id,
       product: item.product._id,
-      itemName: item.product.name,
       quantityPulledOut: Number(quantityPulledOut),
       reason,
       pulledOutBy: req.user.id,
@@ -239,6 +237,7 @@ exports.pullOutItem = async (req, res) => {
 exports.getPullOuts = async (req, res) => {
   try {
     const pullOuts = await PullOut.find()
+      .populate("product", "name")
       .populate("pulledOutBy", "username")
       .populate({
         path: "replacedByItemId",

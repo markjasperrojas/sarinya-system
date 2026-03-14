@@ -8,16 +8,19 @@ const logActivity = require("../utils/activityLogger");
 // CREATE SALE
 exports.addSale = async (req, res) => {
   try {
-    const { itemName, quantity, price } = req.body;
+    const { productId, quantity, price } = req.body;
 
-    const sale = new Sale({ itemName, quantity, price });
+    const product = await Product.findOne({ _id: productId, deletedAt: null });
+    if (!product) return res.status(404).json({ error: "Product not found" });
+
+    const sale = new Sale({ product: productId, quantity, price });
     await sale.save();
 
     logActivity({
       userId: req.user.id,
       action: "add",
       module: "sales",
-      description: `Added sale record for '${itemName}'`,
+      description: `Added sale record for '${product.name}'`,
       targetId: sale._id,
     });
 
@@ -33,9 +36,13 @@ exports.getSales = async (req, res) => {
     const { search, timeRange, date, page = 1, limit = 20, grouped } = req.query;
     let query = { deletedAt: null };
 
-    // Search filter
+    // Search filter — join Product to search by name
     if (search) {
-      query.itemName = { $regex: search, $options: "i" };
+      const matchingProducts = await Product.find({
+        name: { $regex: search, $options: "i" },
+        deletedAt: null,
+      }).select("_id");
+      query.product = { $in: matchingProducts.map((p) => p._id) };
     }
 
     // Specific Date filter (overrides timeRange)
@@ -88,11 +95,24 @@ exports.getSales = async (req, res) => {
         {
           $group: {
             _id: "$product",
-            itemName: { $first: "$itemName" },
             quantity: { $sum: "$quantity" },
             total: { $sum: { $multiply: ["$quantity", "$price"] } },
           },
         },
+        {
+          $lookup: {
+            from: "products",
+            localField: "_id",
+            foreignField: "_id",
+            as: "productDoc",
+          },
+        },
+        {
+          $addFields: {
+            productName: { $arrayElemAt: ["$productDoc.name", 0] },
+          },
+        },
+        { $project: { productDoc: 0 } },
         { $sort: { total: -1 } },
       ]);
       return res.json({ sales: result, pagination: null });
@@ -103,7 +123,7 @@ exports.getSales = async (req, res) => {
     const skip = (pageNum - 1) * limitNum;
 
     const [sales, total] = await Promise.all([
-      Sale.find(query).sort({ date: -1 }).skip(skip).limit(limitNum),
+      Sale.find(query).populate("product", "name").sort({ date: -1 }).skip(skip).limit(limitNum),
       Sale.countDocuments(query),
     ]);
 
@@ -120,19 +140,19 @@ exports.getSales = async (req, res) => {
 exports.updateSale = async (req, res) => {
   try {
     const { id } = req.params;
-    const { itemName, quantity, price } = req.body;
+    const { quantity, price } = req.body;
 
     const updatedSale = await Sale.findByIdAndUpdate(
       id,
-      { itemName, quantity, price },
+      { quantity, price },
       { new: true }
-    );
+    ).populate("product", "name");
 
     logActivity({
       userId: req.user.id,
       action: "edit",
       module: "sales",
-      description: `Updated sale record for '${updatedSale.itemName}'`,
+      description: `Updated sale record for '${updatedSale.product?.name}'`,
       targetId: updatedSale._id,
     });
 
@@ -283,7 +303,6 @@ exports.bulkSell = async (req, res) => {
       await batch.save({ session });
 
       const sale = new Sale({
-        itemName: product.name,
         product: product._id,
         inventoryItemId: batch._id,
         quantity: take,
@@ -317,7 +336,7 @@ exports.deleteSale = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const sale = await Sale.findOne({ _id: id, deletedAt: null });
+    const sale = await Sale.findOne({ _id: id, deletedAt: null }).populate("product", "name");
     if (!sale) {
       return res.status(404).json({ error: "Sale not found" });
     }
@@ -329,7 +348,7 @@ exports.deleteSale = async (req, res) => {
       userId: req.user.id,
       action: "delete",
       module: "sales",
-      description: `Deleted sale record for '${sale.itemName}'`,
+      description: `Deleted sale record for '${sale.product?.name}'`,
       targetId: sale._id,
     });
 

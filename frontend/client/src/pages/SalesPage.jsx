@@ -49,7 +49,7 @@ function buildPieData(sales, metric) {
   );
 
   const result = top.map((s, i) => ({
-    name: s.itemName,
+    name: s.productName,
     value: metric === "revenue" ? s.total : s.quantity,
     color: PIE_COLORS[i],
   }));
@@ -441,7 +441,7 @@ export default function SalesPage() {
                   {sales.map((sale) => (
                     <tr key={sale._id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
-                        <span className="font-medium text-gray-900">{sale.itemName}</span>
+                        <span className="font-medium text-gray-900">{sale.productName}</span>
                       </td>
                       <td className="px-6 py-4 text-gray-600">{sale.quantity}</td>
                       <td className="px-6 py-4">
@@ -490,7 +490,7 @@ export default function SalesPage() {
                   {sales.map((sale) => (
                     <tr key={sale._id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
-                        <span className="font-medium text-gray-900">{sale.itemName}</span>
+                        <span className="font-medium text-gray-900">{sale.product?.name}</span>
                       </td>
                       <td className="px-6 py-4 text-gray-600">{sale.quantity}</td>
                       <td className="px-6 py-4">

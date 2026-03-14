@@ -402,7 +402,7 @@ export default function InventoryPage() {
   }, [items, searchTerm, sortConfig]);
 
   const filteredPullOuts = pullOuts.filter((p) =>
-    p.itemName.toLowerCase().includes(discrepancySearch.toLowerCase())
+    p.product?.name?.toLowerCase().includes(discrepancySearch.toLowerCase())
   );
 
   const isPullOutFormValid =
@@ -678,7 +678,7 @@ export default function InventoryPage() {
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
                               <div className="w-2 h-2 rounded-full bg-red-400" />
-                              <span className="font-medium text-gray-900">{record.itemName}</span>
+                              <span className="font-medium text-gray-900">{record.product?.name}</span>
                             </div>
                           </td>
                           <td className="px-6 py-4">

@@ -9,9 +9,6 @@ const pullOutSchema = new mongoose.Schema({
   product: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Product",
-  },
-  itemName: {
-    type: String,
     required: true,
   },
   quantityPulledOut: {
