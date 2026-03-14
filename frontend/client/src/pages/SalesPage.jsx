@@ -1,11 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import API from "../api";
-import { useAuth } from "../contexts/AuthContext";
 import Button from "../components/Button";
 import TableSkeleton from "../components/TableSkeleton";
 import {
-  Trash2,
   ShoppingCart,
   Calendar,
   TrendingUp,
@@ -172,15 +170,12 @@ export default function SalesPage() {
   const location = useLocation();
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState(null);
   const [search, setSearch] = useState("");
   const [timeRange, setTimeRange] = useState(location.state?.timeRange ?? "daily");
   const [selectedDate, setSelectedDate] = useState("");
   const [viewMode, setViewMode] = useState("products"); // "transactions" | "products"
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 0 });
   const [chartMetric, setChartMetric] = useState("revenue");
-  const { hasPermission } = useAuth();
-
   const loadSales = useCallback(
     async (page = 1) => {
       setLoading(true);
@@ -212,21 +207,6 @@ export default function SalesPage() {
   };
 
   const overallTotal = sales.reduce((sum, sale) => sum + (sale.total || 0), 0);
-
-  const handleDeleteSale = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this sale?")) return;
-
-    setDeletingId(id);
-    try {
-      await API.delete(`/sales/${id}`);
-      loadSales(1);
-    } catch (error) {
-      console.log("Delete sale failed:", error);
-      alert("Failed to delete sale");
-    } finally {
-      setDeletingId(null);
-    }
-  };
 
   // Derived pie data — O(n), no memo needed
   const pieData = viewMode === "products" ? buildPieData(sales, chartMetric) : [];

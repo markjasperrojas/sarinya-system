@@ -8,7 +8,6 @@ import {
   Tag,
   ShoppingCart,
   Shield,
-  User,
   LogOut,
   Utensils,
   MoreHorizontal,

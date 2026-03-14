@@ -8,7 +8,7 @@ export default function ProtectedRoute({
   requiredRole,
   redirectTo = "/",
 }) {
-  const { user, loading, hasPermission, isAdmin } = useAuth();
+  const { user, loading, hasPermission } = useAuth();
   const location = useLocation();
 
   if (loading) {

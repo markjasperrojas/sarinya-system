@@ -23,7 +23,7 @@ export default function LoginPage() {
     if (user) {
       navigate(from, { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, from]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

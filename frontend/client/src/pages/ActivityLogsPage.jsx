@@ -55,7 +55,7 @@ export default function ActivityLogsPage() {
       navigate("/dashboard");
       return;
     }
-  }, []);
+  }, [isAdmin, navigate]);
 
   const loadLogs = useCallback(
     async (page = 1) => {

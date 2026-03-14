@@ -21,7 +21,8 @@
       "Bash(npm install:*)",
       "Bash(find:*)",
       "Bash(grep:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(cd:*)"
     ]
   }
 }

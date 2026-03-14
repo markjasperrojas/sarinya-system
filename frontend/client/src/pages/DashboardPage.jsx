@@ -198,7 +198,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (user) fetchDailyRevenue(selectedYear, selectedMonth);
-  }, [selectedYear, selectedMonth]);
+  }, [user, selectedYear, selectedMonth]);
 
   const fetchAvailableYears = async () => {
     try {

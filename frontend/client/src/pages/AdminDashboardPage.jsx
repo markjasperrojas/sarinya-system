@@ -30,7 +30,7 @@ export default function AdminDashboardPage() {
       return;
     }
     fetchStats();
-  }, []);
+  }, [isAdmin, navigate]);
 
   const fetchStats = async () => {
     try {

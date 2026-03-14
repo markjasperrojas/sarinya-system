@@ -63,7 +63,7 @@ export default function UserManagementPage() {
       setAdminPermissions(ap);
       setAddForm((f) => ({ ...f, permissions: defaultStaffPermissions }));
     }).catch((err) => console.error("Failed to load default permissions:", err));
-  }, []);
+  }, [isAdmin, navigate]);
 
   const loadUsers = async () => {
     setLoading(true);

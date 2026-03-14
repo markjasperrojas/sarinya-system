@@ -7,7 +7,7 @@ import {
   updateInventoryItem,
   pullOutInventoryItem,
 } from "../services/inventoryService";
-import { getProducts, createProduct } from "../services/productService";
+import { getProducts } from "../services/productService";
 import API from "../api";
 import { useAuth } from "../contexts/AuthContext";
 import Modal from "../components/Modal";
