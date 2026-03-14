@@ -5,6 +5,7 @@ import Modal from "../components/Modal";
 import Button from "../components/Button";
 import Input from "../components/Input";
 import Card from "../components/Card";
+import ImageUploadField from "../components/ImageUploadField";
 import { Plus, Tag, Pencil, Trash2, Search, Package, X, LayoutGrid, List } from "lucide-react";
 import API from "../api";
 import { PRODUCT_CATEGORIES } from "../constants/categories";
@@ -24,7 +25,7 @@ export default function ProductsPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [addName, setAddName] = useState("");
   const [addPrice, setAddPrice] = useState("");
-  const [addImageUrl, setAddImageUrl] = useState("");
+  const [addImageUrl, setAddImageUrl] = useState(null);
   const [addCategories, setAddCategories] = useState([]);
   const [addError, setAddError] = useState("");
   const [adding, setAdding] = useState(false);
@@ -68,7 +69,7 @@ export default function ProductsPage() {
   const handleOpenAdd = () => {
     setAddName("");
     setAddPrice("");
-    setAddImageUrl("");
+    setAddImageUrl(null);
     setAddCategories([]);
     setAddError("");
     setIsAddOpen(true);
@@ -80,7 +81,7 @@ export default function ProductsPage() {
     if (!addName.trim() || addPrice === "") return;
     setAdding(true);
     try {
-      await createProduct({ name: addName.trim(), price: Number(addPrice), image_url: addImageUrl.trim() || null, categories: addCategories });
+      await createProduct({ name: addName.trim(), price: Number(addPrice), image_url: addImageUrl || null, categories: addCategories });
       setIsAddOpen(false);
       loadAll();
     } catch (error) {
@@ -106,7 +107,7 @@ export default function ProductsPage() {
       await updateProduct(editProduct._id, {
         name: editProduct.name.trim(),
         price: Number(editProduct.price),
-        image_url: editProduct.image_url?.trim() || null,
+        image_url: editProduct.image_url || null,
         categories: editProduct.categories || [],
       });
       setIsEditOpen(false);
@@ -414,12 +415,9 @@ export default function ProductsPage() {
             min="0"
             step="0.01"
           />
-          <Input
-            label="Image URL (optional)"
-            type="url"
-            placeholder="https://example.com/image.jpg"
-            value={addImageUrl}
-            onChange={(e) => { setAddImageUrl(e.target.value); setAddError(""); }}
+          <ImageUploadField
+            currentUrl={null}
+            onUrlChange={(url) => { setAddImageUrl(url); setAddError(""); }}
           />
           <div>
             <p className="text-sm font-medium text-gray-700 mb-2">Categories (optional)</p>
@@ -477,12 +475,9 @@ export default function ProductsPage() {
               min="0"
               step="0.01"
             />
-            <Input
-              label="Image URL (optional)"
-              type="url"
-              placeholder="https://example.com/image.jpg"
-              value={editProduct.image_url || ""}
-              onChange={(e) => { setEditProduct({ ...editProduct, image_url: e.target.value }); setEditError(""); }}
+            <ImageUploadField
+              currentUrl={editProduct.image_url || null}
+              onUrlChange={(url) => { setEditProduct({ ...editProduct, image_url: url }); setEditError(""); }}
             />
             <div>
               <p className="text-sm font-medium text-gray-700 mb-2">Categories (optional)</p>
