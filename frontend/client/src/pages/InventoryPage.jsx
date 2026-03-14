@@ -4,7 +4,6 @@ import {
   getInventoryItems,
   getPullOuts,
   addInventoryItem,
-  sellInventoryItem,
   updateInventoryItem,
   pullOutInventoryItem,
 } from "../services/inventoryService";
@@ -21,7 +20,6 @@ import {
   Package,
   AlertCircle,
   Search,
-  ShoppingCart,
   Pencil,
   PackageMinus,
   ArrowLeftRight,
@@ -80,12 +78,6 @@ export default function InventoryPage() {
   const [quantity, setQuantity] = useState("");
   const [expirationDate, setExpirationDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
-  // Sell modal state
-  const [isSellModalOpen, setIsSellModalOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [sellQuantity, setSellQuantity] = useState("");
-  const [selling, setSelling] = useState(false);
 
   // Edit modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -188,37 +180,6 @@ export default function InventoryPage() {
       setDeletingId(null);
     }
   };
-
-  // --- Sell ---
-  const handleOpenSellModal = (item) => {
-    setSelectedItem(item);
-    setSellQuantity("");
-    setIsSellModalOpen(true);
-  };
-
-  const handleCloseSellModal = () => {
-    setIsSellModalOpen(false);
-    setSelectedItem(null);
-    setSellQuantity("");
-  };
-
-  const handleSellItem = async (e) => {
-    e.preventDefault();
-    if (!sellQuantity || Number(sellQuantity) <= 0) return;
-    setSelling(true);
-    try {
-      await sellInventoryItem(selectedItem._id, Number(sellQuantity));
-      handleCloseSellModal();
-      loadItems();
-    } catch (error) {
-      alert(error.response?.data?.error || "Failed to sell item");
-    } finally {
-      setSelling(false);
-    }
-  };
-
-  const itemPrice = selectedItem?.product?.price ?? 0;
-  const sellPreviewTotal = Number(sellQuantity || 0) * itemPrice;
 
   // --- Edit ---
   const handleOpenEditModal = (item) => {
@@ -581,13 +542,6 @@ export default function InventoryPage() {
                               </td>
                               <td className="px-6 py-4 text-center">
                                 <div className="flex items-center justify-center gap-2 flex-wrap">
-                                  {hasPermission("sales", "add") && (
-                                    <Button variant="success" size="small" icon={ShoppingCart}
-                                      onClick={() => handleOpenSellModal(item)}
-                                      disabled={expStatus === "expired"}>
-                                      Sell
-                                    </Button>
-                                  )}
                                   {hasPermission("inventory", "edit") && (
                                     <>
                                       <Button variant="primary" size="small" icon={Pencil}
@@ -793,65 +747,6 @@ export default function InventoryPage() {
             </Button>
           </div>
         </form>
-      </Modal>
-
-      {/* ── SELL ITEM MODAL ── */}
-      <Modal isOpen={isSellModalOpen} onClose={handleCloseSellModal} title="Sell Item">
-        {selectedItem && (
-          <form onSubmit={handleSellItem} className="space-y-4">
-            <div className="bg-gray-50 rounded-lg p-4">
-              <p className="font-medium text-gray-900">{selectedItem.product?.name}</p>
-              <div className="flex justify-between text-sm text-gray-600 mt-2">
-                <span>Available: {selectedItem.quantity}</span>
-                <span>Price: ₱{itemPrice?.toLocaleString()}</span>
-              </div>
-            </div>
-            <Input
-              label="Quantity to Sell"
-              type="number"
-              placeholder="Enter quantity"
-              value={sellQuantity}
-              onChange={(e) => setSellQuantity(e.target.value)}
-              required
-              min="1"
-              max={selectedItem.quantity}
-            />
-            {sellQuantity && Number(sellQuantity) > 0 && (
-              <div className="bg-success-50 border border-success-200 rounded-lg p-4 animate-fade-in">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-success-700">Total:</span>
-                  <span className="text-xl font-bold text-success-700">
-                    ₱{sellPreviewTotal.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            )}
-            {sellQuantity && Number(sellQuantity) > selectedItem.quantity && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-                Cannot sell more than available quantity
-              </div>
-            )}
-            <div className="flex gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={handleCloseSellModal} fullWidth>
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                variant="success"
-                loading={selling}
-                fullWidth
-                icon={ShoppingCart}
-                disabled={
-                  !sellQuantity ||
-                  Number(sellQuantity) <= 0 ||
-                  Number(sellQuantity) > selectedItem.quantity
-                }
-              >
-                Confirm Sale
-              </Button>
-            </div>
-          </form>
-        )}
       </Modal>
 
       {/* ── EDIT ITEM MODAL ── */}
