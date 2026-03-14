@@ -8,6 +8,7 @@
     "dev": "concurrently \"npm run server\" \"npm run client\""
   },
   "devDependencies": {
+    "baseline-browser-mapping": "^2.10.7",
     "concurrently": "^8.2.2"
   },
   "dependencies": {

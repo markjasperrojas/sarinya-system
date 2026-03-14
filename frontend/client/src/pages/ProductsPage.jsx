@@ -5,7 +5,7 @@ import Modal from "../components/Modal";
 import Button from "../components/Button";
 import Input from "../components/Input";
 import Card from "../components/Card";
-import { Plus, Tag, Pencil, Trash2, Search, Package, X } from "lucide-react";
+import { Plus, Tag, Pencil, Trash2, Search, Package, X, LayoutGrid, List } from "lucide-react";
 import API from "../api";
 
 export default function ProductsPage() {
@@ -13,6 +13,7 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [deletingId, setDeletingId] = useState(null);
+  const [viewMode, setViewMode] = useState("card");
 
   // Stock counts per product (product._id → total qty)
   const [stockCounts, setStockCounts] = useState({});
@@ -162,9 +163,9 @@ export default function ProductsPage() {
 
       {/* Main */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-8">
-        {/* Search */}
-        <div className="mb-6">
-          <div className="relative max-w-md">
+        {/* Search + View Toggle */}
+        <div className="mb-6 flex items-center gap-3">
+          <div className="relative max-w-md flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
@@ -178,6 +179,22 @@ export default function ProductsPage() {
                 <X className="w-4 h-4" />
               </button>
             )}
+          </div>
+          <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setViewMode("card")}
+              className={`p-2.5 transition-colors ${viewMode === "card" ? "bg-primary-500 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+              title="Card view"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className={`p-2.5 transition-colors ${viewMode === "table" ? "bg-primary-500 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+              title="Table view"
+            >
+              <List className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
@@ -203,7 +220,7 @@ export default function ProductsPage() {
               {searchTerm ? "Try a different search term" : "Add your first product to get started"}
             </p>
           </div>
-        ) : (
+        ) : viewMode === "card" ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 animate-fade-in">
             {filteredProducts.map((product) => {
               const stock = stockCounts[product._id] || 0;
@@ -246,6 +263,80 @@ export default function ProductsPage() {
                 </div>
               );
             })}
+          </div>
+        ) : (
+          <div className="card overflow-hidden animate-fade-in">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Image</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Name</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Price</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Stock</th>
+                  {(hasPermission("inventory", "edit") || hasPermission("inventory", "delete")) && (
+                    <th className="text-right px-4 py-3 font-semibold text-gray-600">Actions</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredProducts.map((product) => {
+                  const stock = stockCounts[product._id] || 0;
+                  return (
+                    <tr key={product._id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3">
+                        {product.image_url ? (
+                          <img
+                            src={product.image_url}
+                            alt={product.name}
+                            className="w-12 h-12 object-cover rounded-lg border border-gray-200"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
+                            <Package className="w-5 h-5 text-gray-400" />
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-gray-900">{product.name}</td>
+                      <td className="px-4 py-3 text-gray-700">₱{Number(product.price).toFixed(2)}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${stock > 0 ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                          {stock} units
+                        </span>
+                      </td>
+                      {(hasPermission("inventory", "edit") || hasPermission("inventory", "delete")) && (
+                        <td className="px-4 py-3">
+                          <div className="flex gap-2 justify-end">
+                            {hasPermission("inventory", "edit") && (
+                              <Button
+                                variant="primary"
+                                size="small"
+                                icon={Pencil}
+                                onClick={() => handleOpenEdit(product)}
+                              >
+                                Edit
+                              </Button>
+                            )}
+                            {hasPermission("inventory", "delete") && (
+                              <Button
+                                variant="danger"
+                                size="small"
+                                icon={Trash2}
+                                onClick={() => handleDelete(product)}
+                                loading={deletingId === product._id}
+                                disabled={stock > 0}
+                                title={stock > 0 ? "Cannot delete while stock exists" : "Delete product"}
+                              >
+                                Delete
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </main>
