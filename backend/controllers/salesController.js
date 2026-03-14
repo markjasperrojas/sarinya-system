@@ -243,6 +243,64 @@ exports.getAvailableYears = async (req, res) => {
   }
 };
 
+// Shared FEFO deduction helper — validates items and builds deductions list
+async function buildDeductions(items, mongoSession) {
+  const deductions = [];
+  for (const item of items) {
+    const { productId, quantity } = item;
+    if (!productId || !quantity || quantity <= 0) throw new Error("Invalid item data");
+
+    const product = await Product.findOne({ _id: productId, deletedAt: null }).session(mongoSession);
+    if (!product) throw new Error(`Product not found`);
+
+    const batches = await Inventory.find({
+      product: productId,
+      status: { $ne: "pulled_out" },
+      quantity: { $gt: 0 },
+      deletedAt: null,
+    })
+      .sort({ expirationDate: 1 })
+      .session(mongoSession);
+
+    const totalAvailable = batches.reduce((sum, b) => sum + b.quantity, 0);
+    if (totalAvailable < quantity) {
+      throw new Error(
+        `Not enough stock for "${product.name}". Available: ${totalAvailable}, requested: ${quantity}`
+      );
+    }
+
+    let remaining = quantity;
+    for (const batch of batches) {
+      if (remaining <= 0) break;
+      const take = Math.min(batch.quantity, remaining);
+      deductions.push({ batch, product, take });
+      remaining -= take;
+    }
+  }
+  return deductions;
+}
+
+// Applies deductions and creates Sale records for a given saleSessionId
+async function applyDeductions(deductions, saleSessionId, mongoSession) {
+  const createdSales = [];
+  for (const { batch, product, take } of deductions) {
+    batch.quantity -= take;
+    batch.updatedAt = new Date();
+    await batch.save({ session: mongoSession });
+
+    const sale = new Sale({
+      product: product._id,
+      inventoryItemId: batch._id,
+      quantity: take,
+      price: product.price,
+      saleSessionId,
+    });
+    await sale.save({ session: mongoSession });
+    createdSales.push(sale);
+  }
+  return createdSales;
+}
+
 // BULK SELL (multi-sell POS)
 exports.bulkSell = async (req, res) => {
   const session = await mongoose.startSession();
@@ -255,63 +313,8 @@ exports.bulkSell = async (req, res) => {
     }
 
     const saleSessionId = randomUUID();
-    const deductions = [];
-
-    // --- Validate ALL items first, collect deductions (FEFO) ---
-    for (const item of items) {
-      const { productId, quantity } = item;
-
-      if (!productId || !quantity || quantity <= 0) {
-        throw new Error("Invalid item data");
-      }
-
-      const product = await Product.findOne({ _id: productId, deletedAt: null }).session(session);
-      if (!product) throw new Error(`Product not found`);
-
-      // FEFO: earliest-expiring batches first
-      const batches = await Inventory.find({
-        product: productId,
-        status: { $ne: "pulled_out" },
-        quantity: { $gt: 0 },
-        deletedAt: null,
-      })
-        .sort({ expirationDate: 1 })
-        .session(session);
-
-      const totalAvailable = batches.reduce((sum, b) => sum + b.quantity, 0);
-      if (totalAvailable < quantity) {
-        throw new Error(
-          `Not enough stock for "${product.name}". Available: ${totalAvailable}, requested: ${quantity}`
-        );
-      }
-
-      // Assign across batches in FEFO order
-      let remaining = quantity;
-      for (const batch of batches) {
-        if (remaining <= 0) break;
-        const take = Math.min(batch.quantity, remaining);
-        deductions.push({ batch, product, take });
-        remaining -= take;
-      }
-    }
-
-    // --- Apply deductions and create Sale records ---
-    const createdSales = [];
-    for (const { batch, product, take } of deductions) {
-      batch.quantity -= take;
-      batch.updatedAt = new Date();
-      await batch.save({ session });
-
-      const sale = new Sale({
-        product: product._id,
-        inventoryItemId: batch._id,
-        quantity: take,
-        price: product.price,
-        saleSessionId,
-      });
-      await sale.save({ session });
-      createdSales.push(sale);
-    }
+    const deductions = await buildDeductions(items, session);
+    const createdSales = await applyDeductions(deductions, saleSessionId, session);
 
     await session.commitTransaction();
 
@@ -326,6 +329,144 @@ exports.bulkSell = async (req, res) => {
   } catch (error) {
     await session.abortTransaction();
     res.status(400).json({ error: error.message || "Bulk sell failed" });
+  } finally {
+    session.endSession();
+  }
+};
+
+// GET RECENT SESSIONS (today's orders grouped by saleSessionId)
+exports.getRecentSessions = async (req, res) => {
+  try {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const sessions = await Sale.aggregate([
+      { $match: { deletedAt: null, date: { $gte: startOfToday } } },
+      {
+        $lookup: {
+          from: "products",
+          localField: "product",
+          foreignField: "_id",
+          as: "productDoc",
+        },
+      },
+      {
+        $addFields: {
+          productName: { $arrayElemAt: ["$productDoc.name", 0] },
+        },
+      },
+      {
+        $group: {
+          _id: "$saleSessionId",
+          createdAt: { $min: "$date" },
+          total: { $sum: { $multiply: ["$quantity", "$price"] } },
+          items: {
+            $push: {
+              productId: "$product",
+              productName: "$productName",
+              quantity: "$quantity",
+              price: "$price",
+            },
+          },
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      { $limit: 20 },
+    ]);
+
+    res.json(sessions);
+  } catch (error) {
+    res.status(500).json({ error: "Get recent sessions failed" });
+  }
+};
+
+// GET SESSION DETAIL (all sale records for a session)
+exports.getSessionDetail = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const sales = await Sale.find({ saleSessionId: sessionId, deletedAt: null })
+      .populate("product", "name price")
+      .sort({ date: 1 });
+    res.json({ saleSessionId: sessionId, sales });
+  } catch (error) {
+    res.status(500).json({ error: "Get session detail failed" });
+  }
+};
+
+// ADD ITEMS TO EXISTING SESSION
+exports.addItemsToSession = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { sessionId } = req.params;
+    const { items } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: "No items provided" });
+    }
+
+    const existing = await Sale.findOne({ saleSessionId: sessionId, deletedAt: null }).session(session);
+    if (!existing) return res.status(404).json({ error: "Session not found" });
+
+    const deductions = await buildDeductions(items, session);
+    const createdSales = await applyDeductions(deductions, sessionId, session);
+
+    await session.commitTransaction();
+
+    logActivity({
+      userId: req.user.id,
+      action: "edit",
+      module: "sales",
+      description: `Added ${items.length} item(s) to session ${sessionId}`,
+    });
+
+    res.json({ message: "Items added to order!", sales: createdSales });
+  } catch (error) {
+    await session.abortTransaction();
+    res.status(400).json({ error: error.message || "Add items to session failed" });
+  } finally {
+    session.endSession();
+  }
+};
+
+// REMOVE ITEM FROM SESSION (restores inventory)
+exports.removeSessionItem = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { sessionId, saleId } = req.params;
+
+    const sale = await Sale.findOne({ _id: saleId, saleSessionId: sessionId, deletedAt: null })
+      .session(session)
+      .populate("product", "name");
+    if (!sale) return res.status(404).json({ error: "Sale item not found" });
+
+    if (sale.inventoryItemId) {
+      const batch = await Inventory.findById(sale.inventoryItemId).session(session);
+      if (batch) {
+        batch.quantity += sale.quantity;
+        batch.updatedAt = new Date();
+        await batch.save({ session });
+      }
+    }
+
+    sale.deletedAt = new Date();
+    await sale.save({ session });
+
+    await session.commitTransaction();
+
+    logActivity({
+      userId: req.user.id,
+      action: "delete",
+      module: "sales",
+      description: `Removed '${sale.product?.name}' from session ${sessionId}`,
+      targetId: sale._id,
+    });
+
+    res.json({ message: "Item removed from order!" });
+  } catch (error) {
+    await session.abortTransaction();
+    res.status(500).json({ error: "Remove session item failed" });
   } finally {
     session.endSession();
   }

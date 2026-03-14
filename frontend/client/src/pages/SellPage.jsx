@@ -2,6 +2,12 @@ import { useEffect, useState } from "react";
 import { getProducts } from "../services/productService";
 import { bulkSell } from "../services/inventoryService";
 import {
+  getRecentSessions,
+  getSessionDetail,
+  addItemsToSession,
+  removeSessionItem,
+} from "../services/salesService";
+import {
   Utensils,
   Search,
   X,
@@ -12,18 +18,33 @@ import {
   CheckCircle,
   ImageOff,
   ChevronUp,
+  Clock,
+  Receipt,
+  ArrowLeft,
 } from "lucide-react";
 import API from "../api";
+import ReceiptModal from "../components/ReceiptModal";
 
 export default function SellPage() {
   const [products, setProducts] = useState([]);
   const [stockCounts, setStockCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [orderItems, setOrderItems] = useState({}); // productId → qty
+  const [orderItems, setOrderItems] = useState({}); // productId → qty (new items)
   const [processing, setProcessing] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [showOrderSheet, setShowOrderSheet] = useState(false);
+
+  // Edit order state
+  const [recentSessions, setRecentSessions] = useState([]);
+  const [editingSessionId, setEditingSessionId] = useState(null);
+  const [sessionSales, setSessionSales] = useState([]); // existing committed sale records
+  const [showRecentPanel, setShowRecentPanel] = useState(false); // desktop toggle
+  const [showRecentSheet, setShowRecentSheet] = useState(false); // mobile sheet
+
+  // Receipt state
+  const [receiptSessionId, setReceiptSessionId] = useState(null);
+  const [showReceipt, setShowReceipt] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -32,9 +53,10 @@ export default function SellPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [prods, inventory] = await Promise.all([
+      const [prods, inventory, sessions] = await Promise.all([
         getProducts(),
         API.get("/inventory").then((r) => r.data),
+        getRecentSessions(),
       ]);
       setProducts(prods);
 
@@ -44,12 +66,15 @@ export default function SellPage() {
         if (pid) counts[pid] = (counts[pid] || 0) + item.quantity;
       });
       setStockCounts(counts);
+      setRecentSessions(sessions);
     } catch (err) {
       console.error("Failed to load sell page data:", err);
     } finally {
       setLoading(false);
     }
   };
+
+  // ── Product tap / quantity handlers ──────────────────────────────────────
 
   const handleTap = (product) => {
     const current = orderItems[product._id] || 0;
@@ -84,6 +109,8 @@ export default function SellPage() {
 
   const handleClear = () => setOrderItems({});
 
+  // ── New order ─────────────────────────────────────────────────────────────
+
   const handleProcessSale = async () => {
     const items = Object.entries(orderItems).map(([productId, quantity]) => ({
       productId,
@@ -93,12 +120,13 @@ export default function SellPage() {
 
     setProcessing(true);
     try {
-      await bulkSell(items);
+      const data = await bulkSell(items);
       setOrderItems({});
       setShowOrderSheet(false);
+      setReceiptSessionId(data.saleSessionId);
       await loadData();
       setSuccessMsg("Order processed!");
-      setTimeout(() => setSuccessMsg(""), 3000);
+      setTimeout(() => setSuccessMsg(""), 4000);
     } catch (err) {
       alert(err.response?.data?.error || "Failed to process sale");
     } finally {
@@ -106,12 +134,104 @@ export default function SellPage() {
     }
   };
 
+  // ── Edit order handlers ───────────────────────────────────────────────────
+
+  const handleOpenSession = async (session) => {
+    try {
+      const data = await getSessionDetail(session._id);
+      setEditingSessionId(session._id);
+      setSessionSales(data.sales);
+      setOrderItems({});
+      setShowRecentPanel(false);
+      setShowRecentSheet(false);
+      setShowOrderSheet(true);
+    } catch (err) {
+      alert("Failed to load order");
+    }
+  };
+
+  const handleExitEditMode = () => {
+    setEditingSessionId(null);
+    setSessionSales([]);
+    setOrderItems({});
+  };
+
+  const handleRemoveSessionItem = async (saleIds) => {
+    // saleIds can be a single id or array (when product spans multiple batches)
+    const ids = Array.isArray(saleIds) ? saleIds : [saleIds];
+    try {
+      await Promise.all(ids.map((id) => removeSessionItem(editingSessionId, id)));
+      setSessionSales((prev) => prev.filter((s) => !ids.includes(s._id)));
+      await loadData();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to remove item");
+    }
+  };
+
+  const handleUpdateOrder = async () => {
+    const newItems = Object.entries(orderItems).map(([productId, quantity]) => ({
+      productId,
+      quantity,
+    }));
+
+    if (newItems.length === 0 && sessionSales.length > 0) {
+      // Nothing new to add — just exit edit mode
+      handleExitEditMode();
+      setShowOrderSheet(false);
+      setSuccessMsg("Order updated!");
+      setTimeout(() => setSuccessMsg(""), 4000);
+      return;
+    }
+
+    if (newItems.length === 0) return;
+
+    setProcessing(true);
+    try {
+      await addItemsToSession(editingSessionId, newItems);
+      const sid = editingSessionId;
+      handleExitEditMode();
+      setShowOrderSheet(false);
+      setReceiptSessionId(sid);
+      await loadData();
+      setSuccessMsg("Order updated!");
+      setTimeout(() => setSuccessMsg(""), 4000);
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to update order");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // ── Derived values ─────────────────────────────────────────────────────────
+
   const orderList = products.filter((p) => (orderItems[p._id] || 0) > 0);
-  const orderTotal = orderList.reduce(
+  const newItemsTotal = orderList.reduce(
     (sum, p) => sum + p.price * (orderItems[p._id] || 0),
     0
   );
   const orderCount = Object.values(orderItems).reduce((sum, q) => sum + q, 0);
+
+  // Aggregate sessionSales by product for display
+  const sessionItemsMap = {};
+  sessionSales.forEach((s) => {
+    const pid = s.product?._id;
+    if (!pid) return;
+    if (sessionItemsMap[pid]) {
+      sessionItemsMap[pid].quantity += s.quantity;
+      sessionItemsMap[pid].saleIds.push(s._id);
+    } else {
+      sessionItemsMap[pid] = {
+        productId: pid,
+        name: s.product.name,
+        price: s.price,
+        quantity: s.quantity,
+        saleIds: [s._id],
+      };
+    }
+  });
+  const sessionItemsList = Object.values(sessionItemsMap);
+  const sessionTotal = sessionItemsList.reduce((sum, s) => sum + s.price * s.quantity, 0);
+  const combinedTotal = sessionTotal + newItemsTotal;
 
   const filtered = products
     .filter((p) => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -121,14 +241,12 @@ export default function SellPage() {
       return aInStock - bInStock;
     });
 
-  // Shared order rows JSX (used in both desktop panel and mobile sheet)
-  const OrderRows = () =>
-    orderList.length === 0 ? (
-      <div className="flex flex-col items-center justify-center h-full text-center py-12">
-        <ShoppingBag className="w-10 h-10 text-gray-200 mb-3" />
-        <p className="text-gray-400 text-sm">Tap a product to add it</p>
-      </div>
-    ) : (
+  const shortId = editingSessionId ? editingSessionId.slice(-6).toUpperCase() : "";
+
+  // ── Shared order rows (new items being added) ──────────────────────────────
+
+  const NewOrderRows = () =>
+    orderList.length === 0 ? null : (
       <>
         {orderList.map((product) => {
           const qty = orderItems[product._id];
@@ -179,6 +297,113 @@ export default function SellPage() {
       </>
     );
 
+  // Existing order rows for new order mode (no session)
+  const OrderRows = () =>
+    orderList.length === 0 ? (
+      <div className="flex flex-col items-center justify-center h-full text-center py-12">
+        <ShoppingBag className="w-10 h-10 text-gray-200 mb-3" />
+        <p className="text-gray-400 text-sm">Tap a product to add it</p>
+      </div>
+    ) : (
+      <NewOrderRows />
+    );
+
+  // ── Recent sessions list (shared between desktop panel and mobile sheet) ──
+
+  const RecentSessionsList = () =>
+    recentSessions.length === 0 ? (
+      <p className="text-xs text-gray-400 text-center py-4">No orders today yet</p>
+    ) : (
+      <div className="space-y-1">
+        {recentSessions.map((s) => {
+          const time = new Date(s.createdAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          const preview = s.items
+            .slice(0, 2)
+            .map((i) => i.productName)
+            .join(", ");
+          const more = s.items.length > 2 ? ` +${s.items.length - 2}` : "";
+          return (
+            <button
+              key={s._id}
+              onClick={() => handleOpenSession(s)}
+              className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-700">{time}</span>
+                <span className="text-xs font-bold text-primary-600">
+                  ₱{s.total.toLocaleString()}
+                </span>
+              </div>
+              <p className="text-xs text-gray-400 truncate mt-0.5">
+                {preview}
+                {more}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+    );
+
+  // ── Order panel content (desktop right panel + inside mobile sheet) ────────
+
+  const EditModeContent = () => (
+    <>
+      {/* Existing items */}
+      {sessionItemsList.length > 0 && (
+        <div className="mb-3">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+            Already ordered
+          </p>
+          {sessionItemsList.map((item) => (
+            <div
+              key={item.productId}
+              className="flex items-center gap-2 py-2 border-b border-gray-50 last:border-0"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {item.name}
+                </p>
+                <p className="text-xs text-gray-500">
+                  ₱{item.price?.toLocaleString()} × {item.quantity} ={" "}
+                  <span className="font-semibold text-gray-700">
+                    ₱{(item.price * item.quantity).toLocaleString()}
+                  </span>
+                </p>
+              </div>
+              <button
+                onClick={() => handleRemoveSessionItem(item.saleIds)}
+                className="w-6 h-6 rounded-md hover:bg-red-50 flex items-center justify-center transition-colors flex-shrink-0"
+              >
+                <Trash2 className="w-3 h-3 text-red-400" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Divider + new items */}
+      {orderList.length > 0 && (
+        <>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 mt-1">
+            Adding now
+          </p>
+          <NewOrderRows />
+        </>
+      )}
+
+      {/* Empty state */}
+      {sessionItemsList.length === 0 && orderList.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-10 text-center">
+          <ShoppingBag className="w-10 h-10 text-gray-200 mb-3" />
+          <p className="text-gray-400 text-sm">All items removed</p>
+        </div>
+      )}
+    </>
+  );
+
   return (
     <>
       {/* Header */}
@@ -194,7 +419,6 @@ export default function SellPage() {
                 Select items to add to order
               </p>
             </div>
-            {/* Mobile success toast in header area */}
             {successMsg && (
               <div className="md:hidden ml-auto flex items-center gap-1.5 text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5 text-xs font-medium">
                 <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
@@ -320,32 +544,75 @@ export default function SellPage() {
           )}
         </main>
 
-        {/* ── Desktop: Right Order Panel (hidden on mobile) ── */}
+        {/* ── Desktop: Right Order Panel ── */}
         <aside className="hidden md:flex w-80 border-l border-gray-200 bg-white flex-col flex-shrink-0">
           {/* Panel Header */}
           <div className="px-4 py-4 border-b border-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5 text-gray-600" />
-              <span className="font-semibold text-gray-900">Current Order</span>
-              {orderCount > 0 && (
-                <span className="text-xs bg-primary-100 text-primary-700 font-semibold px-2 py-0.5 rounded-full">
-                  {orderCount}
-                </span>
-              )}
-            </div>
-            {orderCount > 0 && (
-              <button
-                onClick={handleClear}
-                className="text-xs text-gray-400 hover:text-red-500 transition-colors"
-              >
-                Clear
-              </button>
+            {editingSessionId ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <ShoppingBag className="w-5 h-5 text-gray-600" />
+                  <span className="font-semibold text-gray-900">
+                    Order #{shortId}
+                  </span>
+                </div>
+                <button
+                  onClick={handleExitEditMode}
+                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Exit
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <ShoppingBag className="w-5 h-5 text-gray-600" />
+                  <span className="font-semibold text-gray-900">Current Order</span>
+                  {orderCount > 0 && (
+                    <span className="text-xs bg-primary-100 text-primary-700 font-semibold px-2 py-0.5 rounded-full">
+                      {orderCount}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {orderCount > 0 && (
+                    <button
+                      onClick={handleClear}
+                      className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowRecentPanel((v) => !v)}
+                    title="Recent Orders"
+                    className={`p-1 rounded-md transition-colors ${
+                      showRecentPanel
+                        ? "text-primary-600 bg-primary-50"
+                        : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    <Clock className="w-4 h-4" />
+                  </button>
+                </div>
+              </>
             )}
           </div>
 
+          {/* Recent Orders Panel (toggleable, desktop) */}
+          {!editingSessionId && showRecentPanel && (
+            <div className="border-b border-gray-100 px-4 py-3 bg-gray-50/60">
+              <p className="text-xs font-semibold text-gray-500 mb-2">
+                Today's Orders
+              </p>
+              <RecentSessionsList />
+            </div>
+          )}
+
           {/* Order Items */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-            <OrderRows />
+          <div className="flex-1 overflow-y-auto px-4 py-3">
+            {editingSessionId ? <EditModeContent /> : <OrderRows />}
           </div>
 
           {/* Total + Actions */}
@@ -353,7 +620,7 @@ export default function SellPage() {
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-600">Total</span>
               <span className="text-xl font-bold text-gray-900">
-                ₱{orderTotal.toLocaleString()}
+                ₱{(editingSessionId ? combinedTotal : newItemsTotal).toLocaleString()}
               </span>
             </div>
 
@@ -364,29 +631,72 @@ export default function SellPage() {
               </div>
             )}
 
-            <button
-              onClick={handleProcessSale}
-              disabled={orderCount === 0 || processing}
-              className="w-full py-3 rounded-xl font-semibold text-white transition-all
-                bg-primary-600 hover:bg-primary-700 active:scale-95
-                disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
-            >
-              {processing
-                ? "Processing..."
-                : `Process Order · ₱${orderTotal.toLocaleString()}`}
-            </button>
+            {editingSessionId ? (
+              <>
+                <button
+                  onClick={handleUpdateOrder}
+                  disabled={processing}
+                  className="w-full py-3 rounded-xl font-semibold text-white transition-all
+                    bg-primary-600 hover:bg-primary-700 active:scale-95
+                    disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                >
+                  {processing ? "Updating..." : "Update Order"}
+                </button>
+                <button
+                  onClick={() => {
+                    setReceiptSessionId(editingSessionId);
+                    setShowReceipt(true);
+                  }}
+                  className="w-full py-2 rounded-xl font-medium text-sm text-gray-600 border border-gray-300 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Receipt className="w-4 h-4" />
+                  View Receipt
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleProcessSale}
+                  disabled={orderCount === 0 || processing}
+                  className="w-full py-3 rounded-xl font-semibold text-white transition-all
+                    bg-primary-600 hover:bg-primary-700 active:scale-95
+                    disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                >
+                  {processing
+                    ? "Processing..."
+                    : `Process Order · ₱${newItemsTotal.toLocaleString()}`}
+                </button>
+                {receiptSessionId && (
+                  <button
+                    onClick={() => setShowReceipt(true)}
+                    className="w-full py-2 rounded-xl font-medium text-sm text-gray-600 border border-gray-300 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <Receipt className="w-4 h-4" />
+                    View Last Receipt
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </aside>
       </div>
 
-      {/* ── Mobile: Sticky Bottom Bar (above BottomNav) ── */}
+      {/* ── Mobile: Sticky Bottom Bar ── */}
       <div className="md:hidden fixed bottom-16 left-0 right-0 z-30 bg-white border-t border-gray-200 px-4 py-3 flex gap-2">
+        <button
+          onClick={() => setShowRecentSheet(true)}
+          className="py-2.5 px-3 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-1.5"
+        >
+          <Clock className="w-4 h-4" />
+        </button>
         <button
           onClick={() => setShowOrderSheet(true)}
           className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
         >
           <ShoppingBag className="w-4 h-4" />
-          {orderCount > 0 ? (
+          {editingSessionId ? (
+            <>Edit Order #{shortId}</>
+          ) : orderCount > 0 ? (
             <>
               View Order
               <span className="bg-primary-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
@@ -398,51 +708,75 @@ export default function SellPage() {
           )}
         </button>
         <button
-          onClick={handleProcessSale}
-          disabled={orderCount === 0 || processing}
+          onClick={editingSessionId ? handleUpdateOrder : handleProcessSale}
+          disabled={(editingSessionId ? false : orderCount === 0) || processing}
           className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-white transition-all
             bg-primary-600 hover:bg-primary-700 active:scale-95
             disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
         >
           {processing
-            ? "Processing..."
+            ? "..."
+            : editingSessionId
+            ? "Update"
             : orderCount === 0
             ? "Process Order"
-            : `Process · ₱${orderTotal.toLocaleString()}`}
+            : `Process · ₱${newItemsTotal.toLocaleString()}`}
         </button>
       </div>
 
       {/* ── Mobile: Order Sheet ── */}
       {showOrderSheet && (
         <div className="md:hidden fixed inset-0 z-50">
-          {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/40"
             onClick={() => setShowOrderSheet(false)}
           />
-          {/* Sheet */}
-          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[80vh] flex flex-col">
-            {/* Sheet Handle + Header */}
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
               <div className="flex items-center gap-2">
                 <ShoppingBag className="w-5 h-5 text-gray-600" />
                 <span className="font-semibold text-gray-900">
-                  Current Order
+                  {editingSessionId ? `Order #${shortId}` : "Current Order"}
                 </span>
-                {orderCount > 0 && (
+                {!editingSessionId && orderCount > 0 && (
                   <span className="text-xs bg-primary-100 text-primary-700 font-semibold px-2 py-0.5 rounded-full">
                     {orderCount}
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-3">
-                {orderCount > 0 && (
-                  <button
-                    onClick={handleClear}
-                    className="text-xs text-gray-400 hover:text-red-500 transition-colors"
-                  >
-                    Clear
-                  </button>
+                {editingSessionId ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        setReceiptSessionId(editingSessionId);
+                        setShowReceipt(true);
+                      }}
+                      className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"
+                    >
+                      <Receipt className="w-3.5 h-3.5" />
+                      Receipt
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleExitEditMode();
+                        setShowOrderSheet(false);
+                      }}
+                      className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      Exit
+                    </button>
+                  </>
+                ) : (
+                  orderCount > 0 && (
+                    <button
+                      onClick={handleClear}
+                      className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )
                 )}
                 <button
                   onClick={() => setShowOrderSheet(false)}
@@ -453,34 +787,78 @@ export default function SellPage() {
               </div>
             </div>
 
-            {/* Order Items — scrollable */}
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-              <OrderRows />
+            <div className="flex-1 overflow-y-auto px-4 py-3">
+              {editingSessionId ? <EditModeContent /> : <OrderRows />}
             </div>
 
-            {/* Total + Process */}
             <div className="px-4 py-4 border-t border-gray-200 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-600">Total</span>
                 <span className="text-xl font-bold text-gray-900">
-                  ₱{orderTotal.toLocaleString()}
+                  ₱{(editingSessionId ? combinedTotal : newItemsTotal).toLocaleString()}
                 </span>
               </div>
-              <button
-                onClick={handleProcessSale}
-                disabled={orderCount === 0 || processing}
-                className="w-full py-3 rounded-xl font-semibold text-white transition-all
-                  bg-primary-600 hover:bg-primary-700 active:scale-95
-                  disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
-              >
-                {processing
-                  ? "Processing..."
-                  : `Process Order · ₱${orderTotal.toLocaleString()}`}
-              </button>
+              {editingSessionId ? (
+                <button
+                  onClick={handleUpdateOrder}
+                  disabled={processing}
+                  className="w-full py-3 rounded-xl font-semibold text-white transition-all
+                    bg-primary-600 hover:bg-primary-700 active:scale-95
+                    disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                >
+                  {processing ? "Updating..." : "Update Order"}
+                </button>
+              ) : (
+                <button
+                  onClick={handleProcessSale}
+                  disabled={orderCount === 0 || processing}
+                  className="w-full py-3 rounded-xl font-semibold text-white transition-all
+                    bg-primary-600 hover:bg-primary-700 active:scale-95
+                    disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                >
+                  {processing
+                    ? "Processing..."
+                    : `Process Order · ₱${newItemsTotal.toLocaleString()}`}
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
+
+      {/* ── Mobile: Recent Orders Sheet ── */}
+      {showRecentSheet && (
+        <div className="md:hidden fixed inset-0 z-50">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowRecentSheet(false)}
+          />
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[70vh] flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-gray-600" />
+                <span className="font-semibold text-gray-900">Today's Orders</span>
+              </div>
+              <button
+                onClick={() => setShowRecentSheet(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <ChevronUp className="w-5 h-5 rotate-180" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-3">
+              <RecentSessionsList />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Receipt Modal */}
+      <ReceiptModal
+        isOpen={showReceipt}
+        onClose={() => setShowReceipt(false)}
+        sessionId={receiptSessionId}
+      />
     </>
   );
 }
