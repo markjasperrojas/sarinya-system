@@ -1,12 +1,11 @@
 import axios from "axios";
 
-// Create an axios instance with baseURL pointing to backend
+// In production (Vercel), REACT_APP_API_URL is set to the full Render backend URL.
+// In development, falls back to "/api" which the CRA proxy forwards to localhost:5000.
 const API = axios.create({
-  baseURL: "/api",
-  // baseURL: "https://betty-noncrusading-averie.ngrok-free.dev/api",
+  baseURL: process.env.REACT_APP_API_URL || "/api",
   headers: {
     "Content-Type": "application/json",
-    "ngrok-skip-browser-warning": "true",
   },
 });
 
