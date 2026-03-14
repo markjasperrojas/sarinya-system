@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: sarinya-api
+    name: sarinya-system
     runtime: node
     region: singapore
     plan: free
