@@ -1,7 +1,9 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const morgan = require("morgan");
 const connectDB = require("./config/db");
+const logger = require("./utils/logger");
 
 // Routes
 const authRoutes = require("./routes/authRoutes");
@@ -39,6 +41,13 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// HTTP request logging
+app.use(
+  morgan("combined", {
+    stream: { write: (message) => logger.http(message.trim()) },
+  })
+);
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/inventory", inventoryRoutes);
@@ -59,12 +68,31 @@ app.get("/", (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: "Internal server error" });
+  const status = err.statusCode || 500;
+  const isOperational = err.isOperational === true;
+
+  if (!isOperational) {
+    logger.error(`${req.method} ${req.url} — ${err.message}`, { stack: err.stack });
+  } else {
+    logger.warn(`${req.method} ${req.url} — ${status} ${err.message}`);
+  }
+
+  res.status(status).json({ error: err.message });
+});
+
+// Catch unhandled promise rejections — log and keep the process alive
+process.on("unhandledRejection", (reason) => {
+  logger.error("Unhandled promise rejection", { reason: String(reason) });
+});
+
+// Catch synchronous exceptions that escaped all try/catch — log then exit cleanly
+process.on("uncaughtException", (err) => {
+  logger.error("Uncaught exception — shutting down", { stack: err.stack });
+  process.exit(1);
 });
 
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  logger.info(`Server is running on port ${PORT}`);
 });

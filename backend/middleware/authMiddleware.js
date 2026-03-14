@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const logger = require("../utils/logger");
 
 module.exports = async function (req, res, next) {
   const token = req.headers["authorization"];
@@ -32,6 +33,7 @@ module.exports = async function (req, res, next) {
 
     next();
   } catch (error) {
+    logger.warn(`Auth token rejected: ${error.message}`);
     res.status(401).json({ error: "Invalid token" });
   }
 };
