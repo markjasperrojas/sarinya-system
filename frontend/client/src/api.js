@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Create an axios instance with baseURL pointing to backend
 const API = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: "/api",
   // baseURL: "https://betty-noncrusading-averie.ngrok-free.dev/api",
   headers: {
     "Content-Type": "application/json",
