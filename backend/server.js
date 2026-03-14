@@ -12,6 +12,7 @@ const salesRoutes = require("./routes/salesRoutes");
 const productRoutes = require("./routes/productRoutes");
 const userRoutes = require("./routes/userRoutes");
 const activityLogRoutes = require("./routes/activityLogRoutes");
+const feedbackRoutes = require("./routes/feedbackRoutes");
 
 // Initialize Express app
 const app = express();
@@ -55,6 +56,7 @@ app.use("/api/sales", salesRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/activity-logs", activityLogRoutes);
+app.use("/api/feedback", feedbackRoutes);
 
 // Health check — used by cron pings to prevent Render free-tier cold starts
 app.get("/api/health", (req, res) => {
