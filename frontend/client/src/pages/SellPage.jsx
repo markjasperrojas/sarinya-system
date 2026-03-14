@@ -97,7 +97,7 @@ export default function SellPage() {
       setOrderItems({});
       setShowOrderSheet(false);
       await loadData();
-      setSuccessMsg("Sale processed!");
+      setSuccessMsg("Order processed!");
       setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err) {
       alert(err.response?.data?.error || "Failed to process sale");
@@ -185,9 +185,9 @@ export default function SellPage() {
               <Utensils className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Sell</h1>
+              <h1 className="text-xl font-bold text-gray-900">Take Order</h1>
               <p className="text-xs text-gray-500 hidden sm:block">
-                Tap items to add to order
+                Select items to add to order
               </p>
             </div>
             {/* Mobile success toast in header area */}
@@ -369,7 +369,7 @@ export default function SellPage() {
             >
               {processing
                 ? "Processing..."
-                : `Process Sale · ₱${orderTotal.toLocaleString()}`}
+                : `Process Order · ₱${orderTotal.toLocaleString()}`}
             </button>
           </div>
         </aside>
@@ -403,7 +403,7 @@ export default function SellPage() {
           {processing
             ? "Processing..."
             : orderCount === 0
-            ? "Process Sale"
+            ? "Process Order"
             : `Process · ₱${orderTotal.toLocaleString()}`}
         </button>
       </div>
@@ -471,7 +471,7 @@ export default function SellPage() {
               >
                 {processing
                   ? "Processing..."
-                  : `Process Sale · ₱${orderTotal.toLocaleString()}`}
+                  : `Process Order · ₱${orderTotal.toLocaleString()}`}
               </button>
             </div>
           </div>

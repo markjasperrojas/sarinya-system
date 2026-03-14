@@ -245,8 +245,8 @@ export default function SalesPage() {
                 <h1 className="text-xl font-bold text-gray-900">Sales</h1>
                 <p className="text-xs text-gray-500 hidden sm:block">
                   {viewMode === "products"
-                    ? `${sales.length} products`
-                    : `${pagination.total} total transactions`}
+                    ? `${sales.length} products sold`
+                    : `${pagination.total} transactions`}
                 </p>
               </div>
             </div>
@@ -458,7 +458,7 @@ export default function SalesPage() {
                         <ShoppingCart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                         <p className="text-gray-500 font-medium">No sales recorded yet</p>
                         <p className="text-gray-400 text-sm mt-1">
-                          Sales are recorded from the Inventory page
+                          Sales are recorded from the Take Order or Stocks page
                         </p>
                       </td>
                     </tr>
@@ -473,7 +473,7 @@ export default function SalesPage() {
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
                     <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                      Item
+                      Product
                     </th>
                     <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
                       Qty
@@ -518,7 +518,7 @@ export default function SalesPage() {
                         <ShoppingCart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                         <p className="text-gray-500 font-medium">No sales recorded yet</p>
                         <p className="text-gray-400 text-sm mt-1">
-                          Sales are recorded from the Inventory page
+                          Sales are recorded from the Take Order or Stocks page
                         </p>
                       </td>
                     </tr>

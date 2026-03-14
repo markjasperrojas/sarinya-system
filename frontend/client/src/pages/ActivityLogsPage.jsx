@@ -145,7 +145,7 @@ export default function ActivityLogsPage() {
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all"
             >
               <option value="">All Modules</option>
-              <option value="inventory">Inventory</option>
+              <option value="inventory">Stocks</option>
               <option value="sales">Sales</option>
               <option value="users">Users</option>
               <option value="auth">Auth</option>
@@ -217,7 +217,7 @@ export default function ActivityLogsPage() {
                             actionColors[log.action] || "bg-gray-100 text-gray-800"
                           }`}
                         >
-                          {log.action}
+                          {log.action.replace(/_/g, " ")}
                         </span>
                       </td>
                       <td className="px-6 py-4">

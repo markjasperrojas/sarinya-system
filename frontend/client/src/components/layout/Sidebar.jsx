@@ -30,20 +30,20 @@ export default function Sidebar() {
         </div>
         <div>
           <h1 className="text-lg font-bold text-gray-900">Sarinya</h1>
-          <p className="text-xs text-gray-500">Restaurant System</p>
+          <p className="text-xs text-gray-500">Kitchnette</p>
         </div>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
         {hasPermission("sales", "add") && (
-          <NavItem to="/sell" icon={Utensils} label="Sell" />
+          <NavItem to="/sell" icon={Utensils} label="Take Order" />
         )}
 
         <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
 
         {hasPermission("inventory", "view") && (
-          <NavItem to="/inventory" icon={Package} label="Inventory" />
+          <NavItem to="/inventory" icon={Package} label="Stocks" />
         )}
 
         {hasPermission("inventory", "view") && (

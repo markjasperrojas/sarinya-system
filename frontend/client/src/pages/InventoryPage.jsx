@@ -33,7 +33,7 @@ import {
 const LOW_STOCK_THRESHOLD = 5;
 
 const PULL_OUT_REASONS = [
-  { value: "near_expiry", label: "Near Expiry" },
+  { value: "near_expiry", label: "Expiring Soon" },
   { value: "expired", label: "Expired" },
   { value: "damaged", label: "Damaged" },
   { value: "spoiled", label: "Spoiled" },
@@ -169,7 +169,7 @@ export default function InventoryPage() {
 
   // --- Delete ---
   const handleDeleteInventory = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this item?")) return;
+    if (!window.confirm("Are you sure you want to delete this stock entry?")) return;
     setDeletingId(id);
     try {
       await API.delete(`/inventory/${id}`);
@@ -385,14 +385,14 @@ export default function InventoryPage() {
                 <Package className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Inventory</h1>
-                <p className="text-xs text-gray-500 hidden sm:block">{items.filter(i => i.quantity > 0).length} active batches</p>
+                <h1 className="text-xl font-bold text-gray-900">Stocks</h1>
+                <p className="text-xs text-gray-500 hidden sm:block">{items.filter(i => i.quantity > 0).length} active stock entries</p>
               </div>
             </div>
 
             {activeTab === "stock" && hasPermission("inventory", "add") && (
               <Button variant="success" icon={Plus} onClick={() => setIsModalOpen(true)}>
-                <span className="hidden sm:inline">Add Item</span>
+                <span className="hidden sm:inline">Add Stock</span>
                 <span className="sm:hidden">Add</span>
               </Button>
             )}
@@ -429,7 +429,7 @@ export default function InventoryPage() {
             }`}
           >
             <TriangleAlert className="w-4 h-4" />
-            Discrepancies
+            Pull Outs
           </button>
         </div>
 
@@ -441,7 +441,7 @@ export default function InventoryPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search inventory..."
+                  placeholder="Search stocks..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all"
@@ -468,7 +468,7 @@ export default function InventoryPage() {
                           onClick={() => handleSort("name")}
                           className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100"
                         >
-                          <span className="flex items-center">Item Name <SortIcon col="name" /></span>
+                          <span className="flex items-center">Product <SortIcon col="name" /></span>
                         </th>
                         <th
                           onClick={() => handleSort("quantity")}
@@ -493,10 +493,10 @@ export default function InventoryPage() {
                           <td colSpan="4" className="px-6 py-12 text-center">
                             <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                             <p className="text-gray-500 font-medium">
-                              {searchTerm ? "No items match your search" : "No inventory items yet"}
+                              {searchTerm ? "No stock matches your search" : "No stock entries yet"}
                             </p>
                             <p className="text-gray-400 text-sm mt-1">
-                              {searchTerm ? "Try a different search term" : "Add your first item to get started"}
+                              {searchTerm ? "Try a different search term" : "Add your first stock entry to get started"}
                             </p>
                           </td>
                         </tr>
@@ -583,7 +583,7 @@ export default function InventoryPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search discrepancies..."
+                  placeholder="Search pull outs..."
                   value={discrepancySearch}
                   onChange={(e) => setDiscrepancySearch(e.target.value)}
                   className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all"
@@ -607,10 +607,10 @@ export default function InventoryPage() {
                     <thead>
                       <tr className="bg-gray-50 border-b border-gray-200">
                         <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                          Item
+                          Product
                         </th>
                         <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                          Qty Pulled
+                          Qty Pulled Out
                         </th>
                         <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">
                           Reason
@@ -679,7 +679,7 @@ export default function InventoryPage() {
                             <p className="text-gray-500 font-medium">
                               {discrepancySearch
                                 ? "No records match your search"
-                                : "No discrepancies recorded"}
+                                : "No pull outs recorded"}
                             </p>
                             <p className="text-gray-400 text-sm mt-1">Pull-out records will appear here</p>
                           </td>
@@ -695,7 +695,7 @@ export default function InventoryPage() {
       </main>
 
       {/* ── ADD ITEM MODAL ── */}
-      <Modal isOpen={isModalOpen} onClose={handleCloseModal} title="Add Inventory Batch">
+      <Modal isOpen={isModalOpen} onClose={handleCloseModal} title="Add Stock">
         <form onSubmit={handleAddItem} className="space-y-4">
           {/* Product selector */}
           <div>
@@ -743,14 +743,14 @@ export default function InventoryPage() {
               Cancel
             </Button>
             <Button type="submit" variant="success" loading={submitting} fullWidth icon={Plus}>
-              Add Item
+              Add Stock
             </Button>
           </div>
         </form>
       </Modal>
 
       {/* ── EDIT ITEM MODAL ── */}
-      <Modal isOpen={isEditModalOpen} onClose={handleCloseEditModal} title="Edit Batch">
+      <Modal isOpen={isEditModalOpen} onClose={handleCloseEditModal} title="Edit Stock">
         {editItem && (
           <form onSubmit={handleEditItem} className="space-y-4">
             {/* Read-only product info */}
@@ -791,7 +791,7 @@ export default function InventoryPage() {
       </Modal>
 
       {/* ── PULL OUT MODAL ── */}
-      <Modal isOpen={isPullOutModalOpen} onClose={handleClosePullOutModal} title="Pull Out Item">
+      <Modal isOpen={isPullOutModalOpen} onClose={handleClosePullOutModal} title="Pull Out Stock">
         {pullOutItem && (
           <form onSubmit={handlePullOut} className="space-y-4">
             {/* Item info */}
@@ -842,7 +842,7 @@ export default function InventoryPage() {
                 <div>
                   <span className="text-sm font-medium text-gray-900">Add replacement stock</span>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Create a new batch with a fresh expiration date
+                    Create a new stock entry with a fresh expiration date
                   </p>
                 </div>
               </label>
@@ -850,7 +850,7 @@ export default function InventoryPage() {
               {addReplacement && (
                 <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
                   <div className="bg-primary-50 rounded-lg px-3 py-2 text-sm text-primary-700">
-                    Replacement batch will use <strong>{pullOutItem.product?.name}</strong> at ₱{pullOutItem.product?.price?.toLocaleString()}
+                    Replacement stock will use <strong>{pullOutItem.product?.name}</strong> at ₱{pullOutItem.product?.price?.toLocaleString()}
                   </div>
                   <Input
                     label="New Quantity"

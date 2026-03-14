@@ -322,7 +322,7 @@ export default function DashboardPage() {
           />
 
           <StatsCard
-            title="Monthly Revenue"
+            title="This Month's Revenue"
             value={totalRevenue}
             icon={Banknote}
             colorScheme="success"

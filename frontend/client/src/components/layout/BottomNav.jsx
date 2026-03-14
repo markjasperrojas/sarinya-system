@@ -56,7 +56,7 @@ export default function BottomNav() {
           <NavItem
             to="/sell"
             icon={Utensils}
-            label="Sell"
+            label="Take Order"
             variant="bottom"
           />
         )}
@@ -65,7 +65,7 @@ export default function BottomNav() {
           <NavItem
             to="/inventory"
             icon={Package}
-            label="Inventory"
+            label="Stocks"
             variant="bottom"
           />
         )}

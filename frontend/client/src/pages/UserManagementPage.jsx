@@ -380,7 +380,7 @@ export default function UserManagementPage() {
       <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title="Add New User"
+        title="Add User"
       >
         <form onSubmit={handleAddUser} className="space-y-4">
           <Input
