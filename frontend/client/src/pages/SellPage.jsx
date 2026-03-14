@@ -208,9 +208,9 @@ export default function SellPage() {
       {/* POS Body */}
       <div className="flex" style={{ height: "calc(100vh - 64px)" }}>
         {/* ── Left: Product Grid ── */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-36 md:pb-6">
+        <main className="flex-1 overflow-y-auto px-4 sm:px-6 pb-36 md:pb-6">
           {/* Search */}
-          <div className="mb-5">
+          <div className="sticky top-0 z-10 bg-gray-50 -mx-4 sm:-mx-6 px-4 sm:px-6 pt-4 sm:pt-6 pb-4">
             <div className="relative max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input

@@ -436,7 +436,7 @@ export default function InventoryPage() {
         {/* ── ACTIVE STOCK TAB ── */}
         {activeTab === "stock" && (
           <>
-            <div className="mb-6">
+            <div className="sticky top-16 z-10 bg-gray-50 pb-4">
               <div className="relative max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
@@ -578,7 +578,7 @@ export default function InventoryPage() {
         {/* ── DISCREPANCIES TAB ── */}
         {activeTab === "discrepancies" && (
           <>
-            <div className="mb-6">
+            <div className="sticky top-16 z-10 bg-gray-50 pb-4">
               <div className="relative max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input

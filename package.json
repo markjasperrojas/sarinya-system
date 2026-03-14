@@ -10,6 +10,7 @@
   },
   "devDependencies": {
     "baseline-browser-mapping": "^2.10.7",
+    "cloudflared": "latest",
     "concurrently": "^8.2.2",
     "qrcode-terminal": "^0.12.0"
   },

@@ -272,7 +272,7 @@ export default function SalesPage() {
         </div>
 
         {/* Filters and Search */}
-        <div className="card p-4 mb-6">
+        <div className="card p-4 mb-6 sticky top-16 z-10">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
               {/* Search */}

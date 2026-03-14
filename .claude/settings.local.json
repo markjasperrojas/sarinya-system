@@ -14,7 +14,11 @@
       "Bash(grep -r \"chart\\\\|Chart\\\\|recharts\\\\|graph\\\\|Graph\" /c/Users/MICHAEL/sarinya-system/frontend/client/src --include=\"*.jsx\" --include=\"*.js\" 2>/dev/null | head -20)",
       "Bash(find /c/Users/MICHAEL/sarinya-system -type f -name \"*sales*\" 2>/dev/null | head -20)",
       "Bash(find \"C:\\\\Users\\\\MICHAEL\\\\sarinya-system/frontend/client/src\" -type f \\\\\\( -name \"*.js\" -o -name \"*.jsx\" \\\\\\) 2>/dev/null | grep -v node_modules)",
-      "Bash(find \"C:\\\\Users\\\\MICHAEL\\\\sarinya-system/backend\" -type f -name \"*product*.js\" -o -name \"*inventory*.js\" 2>/dev/null | grep -v node_modules | head -20)"
+      "Bash(find \"C:\\\\Users\\\\MICHAEL\\\\sarinya-system/backend\" -type f -name \"*product*.js\" -o -name \"*inventory*.js\" 2>/dev/null | grep -v node_modules | head -20)",
+      "Bash(npm info:*)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(npm install:*)"
     ]
   }
 }

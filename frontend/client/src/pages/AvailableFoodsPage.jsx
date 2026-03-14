@@ -61,7 +61,7 @@ export default function AvailableFoodsPage() {
       {/* Main */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-8">
         {/* Search */}
-        <div className="mb-6">
+        <div className="sticky top-16 z-10 bg-gray-50 pb-4">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
