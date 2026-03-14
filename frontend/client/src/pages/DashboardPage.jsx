@@ -224,12 +224,13 @@ export default function DashboardPage() {
       ]);
 
       const items = Array.isArray(invRes.data) ? invRes.data : [];
+      const activeItems = items.filter((it) => Number(it.quantity) > 0);
       const sales = Array.isArray(salesRes.data?.sales) ? salesRes.data.sales : [];
       const products = Array.isArray(productsRes.data) ? productsRes.data : [];
 
       setProductCount(products.length);
 
-      const low = items.filter(
+      const low = activeItems.filter(
         (it) => Number(it.quantity) <= LOW_STOCK_THRESHOLD,
       ).length;
       setLowStockCount(low);
@@ -242,7 +243,7 @@ export default function DashboardPage() {
       today.setHours(0, 0, 0, 0);
       const EXPIRY_WARNING_DAYS = 7;
 
-      const expiring = items
+      const expiring = activeItems
         .filter((it) => it.expirationDate)
         .map((it) => {
           const exp = new Date(it.expirationDate);
