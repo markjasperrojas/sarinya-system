@@ -24,12 +24,14 @@ import {
 } from "lucide-react";
 import API from "../api";
 import ReceiptModal from "../components/ReceiptModal";
+import { PRODUCT_CATEGORIES } from "../constants/categories";
 
 export default function SellPage() {
   const [products, setProducts] = useState([]);
   const [stockCounts, setStockCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [orderItems, setOrderItems] = useState({}); // productId → qty (new items)
   const [processing, setProcessing] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
@@ -234,7 +236,11 @@ export default function SellPage() {
   const combinedTotal = sessionTotal + newItemsTotal;
 
   const filtered = products
-    .filter((p) => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter((p) => {
+      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory === "all" || (p.categories || []).includes(selectedCategory);
+      return matchesSearch && matchesCategory;
+    })
     .sort((a, b) => {
       const aInStock = (stockCounts[a._id] || 0) > 0 ? 0 : 1;
       const bInStock = (stockCounts[b._id] || 0) > 0 ? 0 : 1;
@@ -433,8 +439,8 @@ export default function SellPage() {
       <div className="flex" style={{ height: "calc(100vh - 64px)" }}>
         {/* ── Left: Product Grid ── */}
         <main className="flex-1 overflow-y-auto px-4 sm:px-6 pb-36 md:pb-6">
-          {/* Search */}
-          <div className="sticky top-0 z-10 bg-gray-50 -mx-4 sm:-mx-6 px-4 sm:px-6 pt-4 sm:pt-6 pb-4">
+          {/* Search + Category filter */}
+          <div className="sticky top-0 z-10 bg-gray-50 -mx-4 sm:-mx-6 px-4 sm:px-6 pt-4 sm:pt-6 pb-4 space-y-3">
             <div className="relative max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -452,6 +458,32 @@ export default function SellPage() {
                   <X className="w-4 h-4" />
                 </button>
               )}
+            </div>
+            {/* Category pills */}
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+              <button
+                onClick={() => setSelectedCategory("all")}
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  selectedCategory === "all"
+                    ? "bg-primary-600 text-white"
+                    : "bg-white border border-gray-300 text-gray-600 hover:border-primary-400"
+                }`}
+              >
+                All
+              </button>
+              {PRODUCT_CATEGORIES.map((cat) => (
+                <button
+                  key={cat.value}
+                  onClick={() => setSelectedCategory(cat.value)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                    selectedCategory === cat.value
+                      ? "bg-primary-600 text-white"
+                      : "bg-white border border-gray-300 text-gray-600 hover:border-primary-400"
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
             </div>
           </div>
 

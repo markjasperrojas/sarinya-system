@@ -3,12 +3,14 @@ import { getProducts } from "../services/productService";
 import Card from "../components/Card";
 import { Utensils, Search, X, Package } from "lucide-react";
 import API from "../api";
+import { PRODUCT_CATEGORIES } from "../constants/categories";
 
 export default function AvailableFoodsPage() {
   const [products, setProducts] = useState([]);
   const [stockCounts, setStockCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
 
   useEffect(() => {
     const load = async () => {
@@ -35,9 +37,11 @@ export default function AvailableFoodsPage() {
     load();
   }, []);
 
-  const filtered = products.filter((p) =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = products.filter((p) => {
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === "all" || (p.categories || []).includes(selectedCategory);
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <>
@@ -60,8 +64,8 @@ export default function AvailableFoodsPage() {
 
       {/* Main */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-8">
-        {/* Search */}
-        <div className="sticky top-16 z-10 bg-gray-50 pb-4">
+        {/* Search + Category filter */}
+        <div className="sticky top-16 z-10 bg-gray-50 pb-4 space-y-3">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
@@ -79,6 +83,32 @@ export default function AvailableFoodsPage() {
                 <X className="w-4 h-4" />
               </button>
             )}
+          </div>
+          {/* Category pills */}
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            <button
+              onClick={() => setSelectedCategory("all")}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                selectedCategory === "all"
+                  ? "bg-primary-600 text-white"
+                  : "bg-white border border-gray-300 text-gray-600 hover:border-primary-400"
+              }`}
+            >
+              All
+            </button>
+            {PRODUCT_CATEGORIES.map((cat) => (
+              <button
+                key={cat.value}
+                onClick={() => setSelectedCategory(cat.value)}
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  selectedCategory === cat.value
+                    ? "bg-primary-600 text-white"
+                    : "bg-white border border-gray-300 text-gray-600 hover:border-primary-400"
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
           </div>
         </div>
 

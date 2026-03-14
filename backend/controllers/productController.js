@@ -1,6 +1,7 @@
 const Product = require("../models/Product");
 const Inventory = require("../models/Inventory");
 const logActivity = require("../utils/activityLogger");
+const { CATEGORY_VALUES } = require("../constants/categories");
 
 // GET all products
 exports.getProducts = async (req, res) => {
@@ -15,16 +16,18 @@ exports.getProducts = async (req, res) => {
 // CREATE product
 exports.addProduct = async (req, res) => {
   try {
-    const { name, price, image_url } = req.body;
+    const { name, price, image_url, categories } = req.body;
 
     if (!name || !name.trim()) return res.status(400).json({ error: "Product name is required" });
     if (price === undefined || price === null || price === "") return res.status(400).json({ error: "Price is required" });
     if (Number(price) < 0) return res.status(400).json({ error: "Price cannot be negative" });
 
+    const safeCategories = Array.isArray(categories) ? categories.filter((c) => CATEGORY_VALUES.includes(c)) : [];
+
     const existing = await Product.findOne({ name: name.trim(), deletedAt: null }).collation({ locale: "en", strength: 2 });
     if (existing) return res.status(400).json({ error: "A product with this name already exists" });
 
-    const product = new Product({ name: name.trim(), price: Number(price), image_url: image_url || null });
+    const product = new Product({ name: name.trim(), price: Number(price), image_url: image_url || null, categories: safeCategories });
     await product.save();
     res.json({ message: "Product created!", product });
   } catch (error) {
@@ -36,16 +39,23 @@ exports.addProduct = async (req, res) => {
 exports.updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, image_url } = req.body;
+    const { name, price, image_url, categories } = req.body;
 
     if (name) {
       const existing = await Product.findOne({ name: name.trim(), _id: { $ne: id }, deletedAt: null }).collation({ locale: "en", strength: 2 });
       if (existing) return res.status(400).json({ error: "A product with this name already exists" });
     }
 
+    const updateFields = {
+      name: name?.trim(),
+      price: price !== undefined ? Number(price) : undefined,
+      image_url: image_url !== undefined ? (image_url || null) : undefined,
+      categories: categories !== undefined ? categories.filter((c) => CATEGORY_VALUES.includes(c)) : undefined,
+    };
+
     const product = await Product.findOneAndUpdate(
       { _id: id, deletedAt: null },
-      { name: name?.trim(), price: price !== undefined ? Number(price) : undefined, image_url: image_url !== undefined ? (image_url || null) : undefined },
+      updateFields,
       { new: true, omitUndefined: true }
     );
     if (!product) return res.status(404).json({ error: "Product not found" });

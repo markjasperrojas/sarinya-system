@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { CATEGORY_VALUES } = require("../constants/categories");
 
 const productSchema = new mongoose.Schema(
   {
@@ -14,6 +15,11 @@ const productSchema = new mongoose.Schema(
     image_url: {
       type: String,
       default: null,
+    },
+    categories: {
+      type: [String],
+      enum: CATEGORY_VALUES,
+      default: [],
     },
     deletedAt: {
       type: Date,
