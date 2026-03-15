@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import NavItem from "./NavItem";
+import FeedbackModal from "../FeedbackModal";
 import {
   LayoutDashboard,
   Package,
@@ -11,6 +12,7 @@ import {
   LogOut,
   Utensils,
   MoreHorizontal,
+  MessageSquare,
   X,
 } from "lucide-react";
 
@@ -18,6 +20,7 @@ export default function BottomNav() {
   const { user, logout, isAdmin, hasPermission } = useAuth();
   const navigate = useNavigate();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const handleLogout = async () => {
     setIsDrawerOpen(false);
@@ -89,6 +92,13 @@ export default function BottomNav() {
                   <span className="text-sm font-medium">Admin</span>
                 </NavLink>
               )}
+              <button
+                onClick={() => { setIsDrawerOpen(false); setFeedbackOpen(true); }}
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors text-gray-600 hover:bg-gray-50"
+              >
+                <MessageSquare className="w-5 h-5" />
+                <span className="text-sm font-medium">Send Feedback</span>
+              </button>
             </div>
 
             {/* Divider */}
@@ -126,6 +136,8 @@ export default function BottomNav() {
           </div>
         </div>
       )}
+
+      <FeedbackModal isOpen={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
 
       {/* Bottom Navigation Bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 safe-area-bottom">

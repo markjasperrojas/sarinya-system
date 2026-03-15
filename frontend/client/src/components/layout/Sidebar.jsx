@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import NavItem from "./NavItem";
+import FeedbackModal from "../FeedbackModal";
 import {
   LayoutDashboard,
   Package,
@@ -9,11 +11,13 @@ import {
   Shield,
   LogOut,
   Utensils,
+  MessageSquare,
 } from "lucide-react";
 
 export default function Sidebar() {
   const { user, logout, isAdmin, hasPermission } = useAuth();
   const navigate = useNavigate();
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -56,7 +60,17 @@ export default function Sidebar() {
         {isAdmin() && (
           <NavItem to="/admin" icon={Shield} label="Admin" />
         )}
+
+        <button
+          onClick={() => setFeedbackOpen(true)}
+          className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-xl transition-colors text-sm font-medium"
+        >
+          <MessageSquare className="w-5 h-5" />
+          <span>Feedback</span>
+        </button>
       </nav>
+
+      <FeedbackModal isOpen={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
 
       {/* User Info + Logout */}
       <div className="px-4 py-4 border-t border-gray-200">

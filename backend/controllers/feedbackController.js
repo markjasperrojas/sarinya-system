@@ -6,15 +6,16 @@ const AppError = require("../utils/AppError");
 exports.createFeedback = async (req, res) => {
   const { type, title, message, page } = req.body;
 
-  if (!type) throw new AppError("Feedback type is required", 400);
-  if (!title || !title.trim()) throw new AppError("Title is required", 400);
   if (!message || !message.trim()) throw new AppError("Message is required", 400);
+
+  const resolvedType = type || "other";
+  const resolvedTitle = title?.trim() || message.trim().slice(0, 60);
 
   const feedback = await Feedback.create({
     userId: req.user.id,
     username: req.user.username,
-    type,
-    title: title.trim(),
+    type: resolvedType,
+    title: resolvedTitle,
     message: message.trim(),
     page: page || null,
   });
@@ -23,7 +24,7 @@ exports.createFeedback = async (req, res) => {
     userId: req.user.id,
     action: "add",
     module: "feedback",
-    description: `${req.user.username} submitted feedback: "${feedback.title}" (${type})`,
+    description: `${req.user.username} submitted feedback: "${feedback.title}" (${resolvedType})`,
     targetId: feedback._id,
   });
 
