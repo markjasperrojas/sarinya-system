@@ -4,6 +4,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import { setAuthToken } from "./api";
 import "./index.css"; // tailwind
+import * as serviceWorkerRegistration from "./serviceWorkerRegistration";
 
 // Restore token from localStorage so axios keeps the header after refresh
 const token = localStorage.getItem("sarinya_token");
@@ -17,3 +18,5 @@ root.render(
     <App />
   </React.StrictMode>
 );
+
+serviceWorkerRegistration.register();

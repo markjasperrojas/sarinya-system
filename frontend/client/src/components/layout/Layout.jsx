@@ -1,6 +1,7 @@
 import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
 import FeedbackButton from "../FeedbackButton";
+import InstallPrompt from "../InstallPrompt";
 
 export default function Layout({ children }) {
   return (
@@ -9,6 +10,7 @@ export default function Layout({ children }) {
       <BottomNav />
       <main className="md:pl-64">{children}</main>
       <FeedbackButton />
+      <InstallPrompt />
     </div>
   );
 }
