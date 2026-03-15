@@ -2,7 +2,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import NavItem from "./NavItem";
 import {
-  ChefHat,
   LayoutDashboard,
   Package,
   Tag,
@@ -25,8 +24,8 @@ export default function Sidebar() {
     <aside className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:w-64 bg-white border-r border-gray-200 z-50">
       {/* Logo/Brand Header */}
       <div className="flex items-center gap-3 px-6 h-16 border-b border-gray-200">
-        <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center">
-          <ChefHat className="w-5 h-5 text-white" />
+        <div className="w-10 h-10 flex-shrink-0">
+          <img src="/apple-touch-icon.png" alt="Sarinya Logo" className="w-full h-full object-contain" />
         </div>
         <div>
           <h1 className="text-lg font-bold text-gray-900">Sarinya</h1>

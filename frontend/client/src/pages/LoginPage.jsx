@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import API from "../api";
-import { User, Lock, AlertCircle, ChefHat } from "lucide-react";
+import { User, Lock, AlertCircle } from "lucide-react";
 import Input from "../components/Input";
 import Button from "../components/Button";
 
@@ -59,8 +59,8 @@ export default function LoginPage() {
       <div className="relative bg-white w-full max-w-md p-8 rounded-3xl shadow-soft border border-gray-100 animate-fade-in">
         {/* Logo/Brand */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-            <ChefHat className="w-9 h-9 text-white" />
+          <div className="w-20 h-20 mb-4">
+            <img src="/apple-touch-icon.png" alt="Sarinya Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Sarinya Kitchenette</h1>
           <p className="text-gray-500 mt-1">Inventory & Sales System</p>
