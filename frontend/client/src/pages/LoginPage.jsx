@@ -62,7 +62,7 @@ export default function LoginPage() {
           <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
             <ChefHat className="w-9 h-9 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Sarinya Kitchnette</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Sarinya Kitchenette</h1>
           <p className="text-gray-500 mt-1">Inventory & Sales System</p>
         </div>
 

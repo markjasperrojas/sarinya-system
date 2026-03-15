@@ -30,7 +30,7 @@ export default function Sidebar() {
         </div>
         <div>
           <h1 className="text-lg font-bold text-gray-900">Sarinya</h1>
-          <p className="text-xs text-gray-500">Kitchnette</p>
+          <p className="text-xs text-gray-500">Kitchenette</p>
         </div>
       </div>
 
