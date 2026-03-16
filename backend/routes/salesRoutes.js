@@ -11,7 +11,7 @@ router.get("/analytics/years", authMiddleware, requireRole("admin", "staff"), sa
 router.get("/sessions/recent", authMiddleware, requireRole("admin", "staff"), salesController.getRecentSessions);
 router.get("/sessions/:sessionId", authMiddleware, requireRole("admin", "staff"), salesController.getSessionDetail);
 router.post("/sessions/:sessionId/add-items", authMiddleware, requireRole("admin", "staff"), salesController.addItemsToSession);
-router.delete("/sessions/:sessionId/remove-item/:saleId", authMiddleware, requireRole("admin"), salesController.removeSessionItem);
+router.delete("/sessions/:sessionId/remove-item/:saleId", authMiddleware, requireRole("admin", "staff"), salesController.removeSessionItem);
 router.get("/", authMiddleware, requireRole("admin", "staff"), salesController.getSales);
 router.post("/bulk-sell", authMiddleware, requireRole("admin", "staff"), salesController.bulkSell);
 router.post("/add", authMiddleware, requireRole("admin", "staff"), salesController.addSale);

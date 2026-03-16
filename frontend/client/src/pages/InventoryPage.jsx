@@ -94,7 +94,7 @@ export default function InventoryPage() {
   const [replacementExpirationDate, setReplacementExpirationDate] = useState("");
   const [pullingOut, setPullingOut] = useState(false);
 
-  const { isAdmin } = useAuth();
+  const { isAdmin, isStaff } = useAuth();
 
   useEffect(() => {
     loadItems();
@@ -542,7 +542,7 @@ export default function InventoryPage() {
                               </td>
                               <td className="px-6 py-4 text-center">
                                 <div className="flex items-center justify-center gap-2 flex-wrap">
-                                  {isAdmin() && (
+                                  {(isAdmin() || isStaff()) && (
                                     <>
                                       <Button variant="primary" size="small" icon={Pencil}
                                         onClick={() => handleOpenEditModal(item)}>
