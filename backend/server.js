@@ -37,7 +37,7 @@ app.use(
       callback(new Error(`CORS: origin '${origin}' not allowed`));
     },
     credentials: true,
-  })
+  }),
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -46,7 +46,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(
   morgan("combined", {
     stream: { write: (message) => logger.http(message.trim()) },
-  })
+  }),
 );
 
 // Routes
@@ -74,7 +74,9 @@ app.use((err, req, res, next) => {
   const isOperational = err.isOperational === true;
 
   if (!isOperational) {
-    logger.error(`${req.method} ${req.url} — ${err.message}`, { stack: err.stack });
+    logger.error(`${req.method} ${req.url} — ${err.message}`, {
+      stack: err.stack,
+    });
   } else {
     logger.warn(`${req.method} ${req.url} — ${status} ${err.message}`);
   }

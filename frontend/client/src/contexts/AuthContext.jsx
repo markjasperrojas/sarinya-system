@@ -51,16 +51,12 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
   };
 
-  const hasPermission = (module, action) => {
-    if (!user) return false;
-    // Admins have full access
-    if (user.role === "admin") return true;
-    // Check specific permission
-    return user.permissions?.[module]?.[action] ?? false;
-  };
-
   const isAdmin = () => {
     return user?.role === "admin";
+  };
+
+  const isStaff = () => {
+    return user?.role === "staff";
   };
 
   const isAuthenticated = () => {
@@ -73,8 +69,8 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     updateUser,
-    hasPermission,
     isAdmin,
+    isStaff,
     isAuthenticated,
   };
 

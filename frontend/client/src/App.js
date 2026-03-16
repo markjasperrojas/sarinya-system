@@ -32,9 +32,7 @@ function App() {
           <Route
             path="/sell"
             element={
-              <ProtectedRoute
-                requiredPermission={{ module: "sales", action: "add" }}
-              >
+              <ProtectedRoute>
                 <Layout>
                   <SellPage />
                 </Layout>
@@ -54,9 +52,7 @@ function App() {
           <Route
             path="/inventory"
             element={
-              <ProtectedRoute
-                requiredPermission={{ module: "inventory", action: "view" }}
-              >
+              <ProtectedRoute>
                 <Layout>
                   <InventoryPage />
                 </Layout>
@@ -66,9 +62,7 @@ function App() {
           <Route
             path="/products"
             element={
-              <ProtectedRoute
-                requiredPermission={{ module: "inventory", action: "view" }}
-              >
+              <ProtectedRoute>
                 <Layout>
                   <ProductsPage />
                 </Layout>
@@ -78,9 +72,7 @@ function App() {
           <Route
             path="/sales"
             element={
-              <ProtectedRoute
-                requiredPermission={{ module: "sales", action: "view" }}
-              >
+              <ProtectedRoute>
                 <Layout>
                   <SalesPage />
                 </Layout>

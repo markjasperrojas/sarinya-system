@@ -6,7 +6,8 @@
     "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "seed:admin": "node scripts/seedAdmin.js",
-    "migrate:users": "node scripts/migrateUsers.js"
+    "migrate:users": "node scripts/migrateUsers.js",
+    "migrate:remove-permissions": "node scripts/migrateRemovePermissions.js"
   },
   "keywords": [],
   "author": "",

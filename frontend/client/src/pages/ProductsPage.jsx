@@ -36,7 +36,7 @@ export default function ProductsPage() {
   const [editError, setEditError] = useState("");
   const [editing, setEditing] = useState(false);
 
-  const { hasPermission } = useAuth();
+  const { isAdmin } = useAuth();
 
   useEffect(() => {
     loadAll();
@@ -159,7 +159,7 @@ export default function ProductsPage() {
                 <p className="text-xs text-gray-500 hidden sm:block">{products.length} products</p>
               </div>
             </div>
-            {hasPermission("inventory", "add") && (
+            {isAdmin() && (
               <Button variant="success" icon={Plus} onClick={handleOpenAdd}>
                 <span className="hidden sm:inline">Add Product</span>
                 <span className="sm:hidden">Add</span>
@@ -267,9 +267,9 @@ export default function ProductsPage() {
                     name={product.name}
                     price={product.price}
                   />
-                  {(hasPermission("inventory", "edit") || hasPermission("inventory", "delete")) && (
+                  {(isAdmin() || isAdmin()) && (
                     <div className="flex gap-2 mt-2">
-                      {hasPermission("inventory", "edit") && (
+                      {isAdmin() && (
                         <Button
                           variant="primary"
                           size="small"
@@ -280,7 +280,7 @@ export default function ProductsPage() {
                           Edit
                         </Button>
                       )}
-                      {hasPermission("inventory", "delete") && (
+                      {isAdmin() && (
                         <Button
                           variant="danger"
                           size="small"
@@ -311,7 +311,7 @@ export default function ProductsPage() {
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Price</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Stock</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Categories</th>
-                  {(hasPermission("inventory", "edit") || hasPermission("inventory", "delete")) && (
+                  {(isAdmin() || isAdmin()) && (
                     <th className="text-right px-4 py-3 font-semibold text-gray-600">Actions</th>
                   )}
                 </tr>
@@ -357,10 +357,10 @@ export default function ProductsPage() {
                           <span className="text-gray-400 text-xs">—</span>
                         )}
                       </td>
-                      {(hasPermission("inventory", "edit") || hasPermission("inventory", "delete")) && (
+                      {(isAdmin() || isAdmin()) && (
                         <td className="px-4 py-3">
                           <div className="flex gap-2 justify-end">
-                            {hasPermission("inventory", "edit") && (
+                            {isAdmin() && (
                               <Button
                                 variant="primary"
                                 size="small"
@@ -370,7 +370,7 @@ export default function ProductsPage() {
                                 Edit
                               </Button>
                             )}
-                            {hasPermission("inventory", "delete") && (
+                            {isAdmin() && (
                               <Button
                                 variant="danger"
                                 size="small"

@@ -6,13 +6,11 @@ import {
   createUser,
   updateUser,
   deleteUser,
-  getDefaultPermissions,
 } from "../services/userService";
 import Modal from "../components/Modal";
 import Button from "../components/Button";
 import Input from "../components/Input";
 import TableSkeleton from "../components/TableSkeleton";
-import PermissionCheckbox from "../components/PermissionCheckbox";
 import {
   Users,
   Plus,
@@ -31,8 +29,6 @@ export default function UserManagementPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [deletingId, setDeletingId] = useState(null);
-  const [defaultPermissions, setDefaultPermissions] = useState(null);
-  const [adminPermissions, setAdminPermissions] = useState(null);
   const navigate = useNavigate();
   const { user: currentUser, isAdmin } = useAuth();
 
@@ -42,7 +38,6 @@ export default function UserManagementPage() {
     username: "",
     password: "",
     role: "staff",
-    permissions: null,
     isActive: true,
   });
   const [adding, setAdding] = useState(false);
@@ -58,11 +53,6 @@ export default function UserManagementPage() {
       return;
     }
     loadUsers();
-    getDefaultPermissions().then(({ defaultStaffPermissions, adminPermissions: ap }) => {
-      setDefaultPermissions(defaultStaffPermissions);
-      setAdminPermissions(ap);
-      setAddForm((f) => ({ ...f, permissions: defaultStaffPermissions }));
-    }).catch((err) => console.error("Failed to load default permissions:", err));
   }, [isAdmin, navigate]);
 
   const loadUsers = async () => {
@@ -83,19 +73,9 @@ export default function UserManagementPage() {
 
     setAdding(true);
     try {
-      await createUser({
-        ...addForm,
-        permissions:
-          addForm.role === "admin" ? adminPermissions : addForm.permissions,
-      });
+      await createUser(addForm);
       setIsAddModalOpen(false);
-      setAddForm({
-        username: "",
-        password: "",
-        role: "staff",
-        permissions: defaultPermissions,
-        isActive: true,
-      });
+      setAddForm({ username: "", password: "", role: "staff", isActive: true });
       loadUsers();
     } catch (error) {
       console.error("Failed to create user:", error);
@@ -106,10 +86,7 @@ export default function UserManagementPage() {
   };
 
   const handleOpenEditModal = (userToEdit) => {
-    setEditForm({
-      ...userToEdit,
-      password: "",
-    });
+    setEditForm({ ...userToEdit, password: "" });
     setIsEditModalOpen(true);
   };
 
@@ -122,12 +99,9 @@ export default function UserManagementPage() {
       const updateData = {
         username: editForm.username,
         role: editForm.role,
-        permissions:
-          editForm.role === "admin" ? adminPermissions : editForm.permissions,
         isActive: editForm.isActive,
       };
 
-      // Only include password if it was changed
       if (editForm.password) {
         updateData.password = editForm.password;
       }
@@ -411,54 +385,13 @@ export default function UserManagementPage() {
             </label>
             <select
               value={addForm.role}
-              onChange={(e) =>
-                setAddForm({
-                  ...addForm,
-                  role: e.target.value,
-                  permissions:
-                    e.target.value === "admin"
-                      ? adminPermissions
-                      : defaultPermissions,
-                })
-              }
+              onChange={(e) => setAddForm({ ...addForm, role: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all"
             >
               <option value="staff">Staff</option>
               <option value="admin">Admin</option>
             </select>
           </div>
-
-          {addForm.role === "staff" && addForm.permissions && (
-            <div className="space-y-3">
-              <label className="block text-sm font-medium text-gray-700">
-                Permissions
-              </label>
-              <PermissionCheckbox
-                label="Inventory"
-                module="inventory"
-                permissions={addForm.permissions}
-                onChange={(permissions) =>
-                  setAddForm({ ...addForm, permissions })
-                }
-              />
-              <PermissionCheckbox
-                label="Sales"
-                module="sales"
-                permissions={addForm.permissions}
-                onChange={(permissions) =>
-                  setAddForm({ ...addForm, permissions })
-                }
-              />
-              <PermissionCheckbox
-                label="Users"
-                module="users"
-                permissions={addForm.permissions}
-                onChange={(permissions) =>
-                  setAddForm({ ...addForm, permissions })
-                }
-              />
-            </div>
-          )}
 
           <div className="flex gap-3 pt-4">
             <Button
@@ -521,14 +454,7 @@ export default function UserManagementPage() {
               <select
                 value={editForm.role}
                 onChange={(e) =>
-                  setEditForm({
-                    ...editForm,
-                    role: e.target.value,
-                    permissions:
-                      e.target.value === "admin"
-                        ? adminPermissions
-                        : editForm.permissions,
-                  })
+                  setEditForm({ ...editForm, role: e.target.value })
                 }
                 disabled={editForm._id === currentUser.id}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -542,38 +468,6 @@ export default function UserManagementPage() {
                 </p>
               )}
             </div>
-
-            {editForm.role === "staff" && (
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700">
-                  Permissions
-                </label>
-                <PermissionCheckbox
-                  label="Inventory"
-                  module="inventory"
-                  permissions={editForm.permissions}
-                  onChange={(permissions) =>
-                    setEditForm({ ...editForm, permissions })
-                  }
-                />
-                <PermissionCheckbox
-                  label="Sales"
-                  module="sales"
-                  permissions={editForm.permissions}
-                  onChange={(permissions) =>
-                    setEditForm({ ...editForm, permissions })
-                  }
-                />
-                <PermissionCheckbox
-                  label="Users"
-                  module="users"
-                  permissions={editForm.permissions}
-                  onChange={(permissions) =>
-                    setEditForm({ ...editForm, permissions })
-                  }
-                />
-              </div>
-            )}
 
             <div>
               <label className="flex items-center gap-2 cursor-pointer">

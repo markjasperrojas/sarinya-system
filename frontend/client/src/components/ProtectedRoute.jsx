@@ -4,11 +4,10 @@ import LoadingSpinner from "./LoadingSpinner";
 
 export default function ProtectedRoute({
   children,
-  requiredPermission,
   requiredRole,
   redirectTo = "/",
 }) {
-  const { user, loading, hasPermission } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -28,14 +27,6 @@ export default function ProtectedRoute({
   if (requiredRole) {
     const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
     if (!roles.includes(user.role)) {
-      return <Navigate to="/dashboard" replace />;
-    }
-  }
-
-  // Check required permission
-  if (requiredPermission) {
-    const { module, action } = requiredPermission;
-    if (!hasPermission(module, action)) {
       return <Navigate to="/dashboard" replace />;
     }
   }

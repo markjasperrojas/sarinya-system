@@ -22,7 +22,8 @@
       "Bash(find:*)",
       "Bash(grep:*)",
       "Bash(git:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(cd /c/Users/MICHAEL/sarinya-system/backend && npm run migrate:remove-permissions)"
     ]
   }
 }

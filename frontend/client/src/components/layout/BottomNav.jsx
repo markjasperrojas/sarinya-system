@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 
 export default function BottomNav() {
-  const { user, logout, isAdmin, hasPermission } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -59,8 +59,7 @@ export default function BottomNav() {
 
             {/* Drawer Nav Items */}
             <div className="px-3 py-2">
-              {hasPermission("sales", "view") && (
-                <NavLink
+              <NavLink
                   to="/sales"
                   onClick={closeDrawer}
                   className={({ isActive }) =>
@@ -74,7 +73,6 @@ export default function BottomNav() {
                   <ShoppingCart className="w-5 h-5" />
                   <span className="text-sm font-medium">Sales</span>
                 </NavLink>
-              )}
 
               {isAdmin() && (
                 <NavLink
@@ -149,32 +147,26 @@ export default function BottomNav() {
             variant="bottom"
           />
 
-          {hasPermission("sales", "add") && (
-            <NavItem
+          <NavItem
               to="/sell"
               icon={Utensils}
               label="Take Order"
               variant="bottom"
             />
-          )}
 
-          {hasPermission("inventory", "view") && (
-            <NavItem
+          <NavItem
               to="/inventory"
               icon={Package}
               label="Stocks"
               variant="bottom"
             />
-          )}
 
-          {hasPermission("inventory", "view") && (
-            <NavItem
+          <NavItem
               to="/products"
               icon={Tag}
               label="Products"
               variant="bottom"
             />
-          )}
 
           {/* More Button */}
           <button

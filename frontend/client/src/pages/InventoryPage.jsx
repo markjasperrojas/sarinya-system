@@ -94,7 +94,7 @@ export default function InventoryPage() {
   const [replacementExpirationDate, setReplacementExpirationDate] = useState("");
   const [pullingOut, setPullingOut] = useState(false);
 
-  const { hasPermission } = useAuth();
+  const { isAdmin } = useAuth();
 
   useEffect(() => {
     loadItems();
@@ -390,7 +390,7 @@ export default function InventoryPage() {
               </div>
             </div>
 
-            {activeTab === "stock" && hasPermission("inventory", "add") && (
+            {activeTab === "stock" && true && (
               <Button variant="success" icon={Plus} onClick={() => setIsModalOpen(true)}>
                 <span className="hidden sm:inline">Add Stock</span>
                 <span className="sm:hidden">Add</span>
@@ -542,7 +542,7 @@ export default function InventoryPage() {
                               </td>
                               <td className="px-6 py-4 text-center">
                                 <div className="flex items-center justify-center gap-2 flex-wrap">
-                                  {hasPermission("inventory", "edit") && (
+                                  {isAdmin() && (
                                     <>
                                       <Button variant="primary" size="small" icon={Pencil}
                                         onClick={() => handleOpenEditModal(item)}>
@@ -554,7 +554,7 @@ export default function InventoryPage() {
                                       </Button>
                                     </>
                                   )}
-                                  {hasPermission("inventory", "delete") && (
+                                  {isAdmin() && (
                                     <Button variant="danger" size="small" icon={Trash2}
                                       onClick={() => handleDeleteInventory(item._id)}
                                       loading={deletingId === item._id}>

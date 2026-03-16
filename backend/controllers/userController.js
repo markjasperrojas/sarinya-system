@@ -3,23 +3,6 @@ const bcrypt = require("bcryptjs");
 const logActivity = require("../utils/activityLogger");
 const AppError = require("../utils/AppError");
 
-const defaultStaffPermissions = {
-  inventory: { view: true, add: false, edit: false, delete: false },
-  sales: { view: true, add: true, edit: false, delete: false },
-  users: { view: false, add: false, edit: false, delete: false },
-};
-
-const adminPermissions = {
-  inventory: { view: true, add: true, edit: true, delete: true },
-  sales: { view: true, add: true, edit: true, delete: true },
-  users: { view: true, add: true, edit: true, delete: true },
-};
-
-// Get default permissions
-exports.getDefaultPermissions = (req, res) => {
-  res.json({ defaultStaffPermissions, adminPermissions });
-};
-
 // Get all users
 exports.getUsers = async (req, res) => {
   const users = await User.find({ deletedAt: null }).select("-password").sort({ createdAt: -1 });
@@ -46,7 +29,7 @@ exports.getProfile = async (req, res) => {
 
 // Create new user
 exports.createUser = async (req, res) => {
-  const { username, password, role, permissions, isActive } = req.body;
+  const { username, password, role, isActive } = req.body;
 
   // Check if username already exists (among non-deleted users)
   const existingUser = await User.findOne({ username, deletedAt: null });
@@ -57,19 +40,12 @@ exports.createUser = async (req, res) => {
   // Hash password
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // Create user with provided or default values
   const newUser = new User({
     username,
     password: hashedPassword,
     role: role || "staff",
-    permissions: permissions || undefined,
     isActive: isActive !== undefined ? isActive : true,
   });
-
-  // If role is admin, grant all permissions
-  if (role === "admin") {
-    newUser.permissions = adminPermissions;
-  }
 
   await newUser.save();
 
@@ -90,7 +66,7 @@ exports.createUser = async (req, res) => {
 
 // Update user
 exports.updateUser = async (req, res) => {
-  const { username, password, role, permissions, isActive } = req.body;
+  const { username, password, role, isActive } = req.body;
 
   const user = await User.findOne({ _id: req.params.id, deletedAt: null });
 
@@ -115,15 +91,6 @@ exports.updateUser = async (req, res) => {
   // Update role if provided
   if (role) {
     user.role = role;
-    // If changing to admin, grant all permissions
-    if (role === "admin") {
-      user.permissions = adminPermissions;
-    }
-  }
-
-  // Update permissions if provided and not admin
-  if (permissions && user.role !== "admin") {
-    user.permissions = permissions;
   }
 
   // Update isActive if provided

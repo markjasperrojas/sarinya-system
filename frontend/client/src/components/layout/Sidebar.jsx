@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 export default function Sidebar() {
-  const { user, logout, isAdmin, hasPermission } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
@@ -39,23 +39,15 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-        {hasPermission("sales", "add") && (
-          <NavItem to="/sell" icon={Utensils} label="Take Order" />
-        )}
+        <NavItem to="/sell" icon={Utensils} label="Take Order" />
 
         <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
 
-        {hasPermission("inventory", "view") && (
-          <NavItem to="/inventory" icon={Package} label="Stocks" />
-        )}
+        <NavItem to="/inventory" icon={Package} label="Stocks" />
 
-        {hasPermission("inventory", "view") && (
-          <NavItem to="/products" icon={Tag} label="Products" />
-        )}
+        <NavItem to="/products" icon={Tag} label="Products" />
 
-        {hasPermission("sales", "view") && (
-          <NavItem to="/sales" icon={ShoppingCart} label="Sales" />
-        )}
+        <NavItem to="/sales" icon={ShoppingCart} label="Sales" />
 
         {isAdmin() && (
           <NavItem to="/admin" icon={Shield} label="Admin" />

@@ -2,15 +2,15 @@ const express = require("express");
 const router = express.Router();
 const inventoryController = require("../controllers/inventoryController");
 const authMiddleware = require("../middleware/authMiddleware");
-const { requirePermission } = require("../middleware/permissionMiddleware");
+const { requireRole } = require("../middleware/permissionMiddleware");
 
-// Protected routes with permission checks
-router.get("/", authMiddleware, requirePermission("inventory", "view"), inventoryController.getItems);
-router.get("/pullouts", authMiddleware, requirePermission("inventory", "view"), inventoryController.getPullOuts);
-router.post("/add", authMiddleware, requirePermission("inventory", "add"), inventoryController.addItem);
-router.put("/:id", authMiddleware, requirePermission("inventory", "edit"), inventoryController.updateItem);
-router.delete("/:id", authMiddleware, requirePermission("inventory", "delete"), inventoryController.deleteItem);
-router.post("/:id/sell", authMiddleware, requirePermission("sales", "add"), inventoryController.sellItem);
-router.post("/:id/pullout", authMiddleware, requirePermission("inventory", "edit"), inventoryController.pullOutItem);
+// Protected routes with role checks
+router.get("/", authMiddleware, requireRole("admin", "staff"), inventoryController.getItems);
+router.get("/pullouts", authMiddleware, requireRole("admin", "staff"), inventoryController.getPullOuts);
+router.post("/add", authMiddleware, requireRole("admin", "staff"), inventoryController.addItem);
+router.put("/:id", authMiddleware, requireRole("admin"), inventoryController.updateItem);
+router.delete("/:id", authMiddleware, requireRole("admin"), inventoryController.deleteItem);
+router.post("/:id/sell", authMiddleware, requireRole("admin", "staff"), inventoryController.sellItem);
+router.post("/:id/pullout", authMiddleware, requireRole("admin"), inventoryController.pullOutItem);
 
 module.exports = router;

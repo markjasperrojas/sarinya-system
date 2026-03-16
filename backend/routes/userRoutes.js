@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/userController");
 const authMiddleware = require("../middleware/authMiddleware");
-const { requireRole, requirePermission } = require("../middleware/permissionMiddleware");
+const { requireRole } = require("../middleware/permissionMiddleware");
 
 // All routes require authentication
 router.use(authMiddleware);
@@ -10,22 +10,11 @@ router.use(authMiddleware);
 // Get current user profile (any authenticated user)
 router.get("/profile", userController.getProfile);
 
-// List all users (requires users.view permission)
-router.get("/", requirePermission("users", "view"), userController.getUsers);
-
-// Get default permissions (must be before /:id)
-router.get("/default-permissions", userController.getDefaultPermissions);
-
-// Get single user (requires users.view permission)
-router.get("/:id", requirePermission("users", "view"), userController.getUser);
-
-// Create user (requires users.add permission)
-router.post("/", requirePermission("users", "add"), userController.createUser);
-
-// Update user (requires users.edit permission)
-router.put("/:id", requirePermission("users", "edit"), userController.updateUser);
-
-// Delete user (requires users.delete permission)
-router.delete("/:id", requirePermission("users", "delete"), userController.deleteUser);
+// All other user management routes require admin role
+router.get("/", requireRole("admin"), userController.getUsers);
+router.get("/:id", requireRole("admin"), userController.getUser);
+router.post("/", requireRole("admin"), userController.createUser);
+router.put("/:id", requireRole("admin"), userController.updateUser);
+router.delete("/:id", requireRole("admin"), userController.deleteUser);
 
 module.exports = router;
