@@ -39,9 +39,9 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-        <NavItem to="/sell" icon={Utensils} label="Take Order" />
-
         <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
+
+        <NavItem to="/sell" icon={Utensils} label="Take Order" />
 
         <NavItem to="/inventory" icon={Package} label="Stocks" />
 
