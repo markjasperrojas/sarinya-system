@@ -23,7 +23,17 @@
       "Bash(grep:*)",
       "Bash(git:*)",
       "Bash(cd:*)",
-      "Bash(cd /c/Users/MICHAEL/sarinya-system/backend && npm run migrate:remove-permissions)"
+      "Bash(cd /c/Users/MICHAEL/sarinya-system/backend && npm run migrate:remove-permissions)",
+      "Bash(wc -l /c/Users/MICHAEL/sarinya-system/frontend/client/src/**/*.jsx /c/Users/MICHAEL/sarinya-system/frontend/client/src/**/*.js 2>/dev/null | tail -1)",
+      "Bash(cd /c/Users/MICHAEL/sarinya-system/backend && npm test -- --testPathPattern=\"AppError\" --forceExit 2>&1 | tail -20)",
+      "Bash(npx jest:*)",
+      "Bash(npm run:*)",
+      "Bash(npx react-scripts:*)",
+      "Bash(ls /c/Users/MICHAEL/sarinya-system/frontend/client/node_modules/react-router/dist/ && grep '\"main\"' /c/Users/MICHAEL/sarinya-system/frontend/client/node_modules/react-router/package.json)",
+      "Bash(node -e \"const cfg = require\\('/c/Users/MICHAEL/sarinya-system/frontend/client/node_modules/react-scripts/utils/createJestConfig.js'\\); console.log\\(JSON.stringify\\(cfg\\(\\), null, 2\\).slice\\(0, 2000\\)\\)\")",
+      "Bash(node -e \"console.log\\(require\\('/c/Users/MICHAEL/sarinya-system/frontend/client/node_modules/jest/package.json'\\).version\\)\")",
+      "Bash(head -2 /c/Users/MICHAEL/sarinya-system/frontend/client/node_modules/cookie/index.js 2>/dev/null || echo \"not found\"\ngrep '\"main\"' /c/Users/MICHAEL/sarinya-system/frontend/client/node_modules/cookie/package.json 2>/dev/null | head -1)",
+      "Bash(cd /c/Users/MICHAEL/sarinya-system/backend && npm test -- --forceExit 2>&1 | tail -20)"
     ]
   }
 }
