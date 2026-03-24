@@ -56,7 +56,7 @@ describe("POST /api/sales/bulk-sell", () => {
     const p = await createProduct({ price: 50 });
     const earlyBatch = await createInventoryBatch(p._id, {
       quantity: 5,
-      expirationDate: new Date("2026-01-01T00:00:00.000Z"),
+      expirationDate: new Date("2026-04-01T00:00:00.000Z"),
     });
     const laterBatch = await createInventoryBatch(p._id, {
       quantity: 10,
@@ -89,6 +89,46 @@ describe("POST /api/sales/bulk-sell", () => {
     expect(res.body.saleSessionId).toBeDefined();
     expect(res.body.sales).toHaveLength(1);
     expect(res.body.sales[0].quantity).toBe(2);
+  });
+
+  it("returns 400 when all batches for a product are expired", async () => {
+    const p = await createProduct({ name: "Expired Product" });
+    await createInventoryBatch(p._id, {
+      quantity: 5,
+      expirationDate: new Date("2026-01-01T00:00:00.000Z"),
+    });
+
+    const res = await request(app)
+      .post("/api/sales/bulk-sell")
+      .set("Authorization", `Bearer ${staffToken}`)
+      .send({ items: [{ productId: p._id, quantity: 1 }] });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("Expired Product");
+  });
+
+  it("only deducts from non-expired batches when some are expired", async () => {
+    const p = await createProduct({ price: 50 });
+    const expiredBatch = await createInventoryBatch(p._id, {
+      quantity: 10,
+      expirationDate: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    const validBatch = await createInventoryBatch(p._id, {
+      quantity: 8,
+      expirationDate: new Date("2026-06-01T00:00:00.000Z"),
+    });
+
+    const res = await request(app)
+      .post("/api/sales/bulk-sell")
+      .set("Authorization", `Bearer ${staffToken}`)
+      .send({ items: [{ productId: p._id, quantity: 3 }] });
+
+    expect(res.status).toBe(200);
+
+    const updatedExpired = await Inventory.findById(expiredBatch._id);
+    const updatedValid = await Inventory.findById(validBatch._id);
+    expect(updatedExpired.quantity).toBe(10); // expired batch untouched
+    expect(updatedValid.quantity).toBe(5);    // 3 taken from valid batch
   });
 
   it("aborts the transaction if a later item fails — first item's inventory NOT decremented", async () => {

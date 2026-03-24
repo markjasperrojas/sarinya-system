@@ -230,11 +230,15 @@ async function buildDeductions(items, mongoSession) {
     const product = await Product.findOne({ _id: productId, deletedAt: null }).session(mongoSession);
     if (!product) throw new AppError("Product not found", 404);
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const batches = await Inventory.find({
       product: productId,
       status: { $ne: "pulled_out" },
       quantity: { $gt: 0 },
       deletedAt: null,
+      expirationDate: { $gte: today },
     })
       .sort({ expirationDate: 1 })
       .session(mongoSession);

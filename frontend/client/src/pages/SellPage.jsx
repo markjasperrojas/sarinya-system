@@ -65,10 +65,16 @@ export default function SellPage() {
       ]);
       setProducts(prods);
 
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
       const counts = {};
       inventory.forEach((item) => {
         const pid = item.product?._id;
-        if (pid) counts[pid] = (counts[pid] || 0) + item.quantity;
+        const expDate = item.expirationDate ? new Date(item.expirationDate) : null;
+        if (pid && expDate && expDate >= today) {
+          counts[pid] = (counts[pid] || 0) + item.quantity;
+        }
       });
       setStockCounts(counts);
       setRecentSessions(sessions);
