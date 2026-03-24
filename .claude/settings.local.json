@@ -33,7 +33,19 @@
       "Bash(node -e \"const cfg = require\\('/c/Users/MICHAEL/sarinya-system/frontend/client/node_modules/react-scripts/utils/createJestConfig.js'\\); console.log\\(JSON.stringify\\(cfg\\(\\), null, 2\\).slice\\(0, 2000\\)\\)\")",
       "Bash(node -e \"console.log\\(require\\('/c/Users/MICHAEL/sarinya-system/frontend/client/node_modules/jest/package.json'\\).version\\)\")",
       "Bash(head -2 /c/Users/MICHAEL/sarinya-system/frontend/client/node_modules/cookie/index.js 2>/dev/null || echo \"not found\"\ngrep '\"main\"' /c/Users/MICHAEL/sarinya-system/frontend/client/node_modules/cookie/package.json 2>/dev/null | head -1)",
-      "Bash(cd /c/Users/MICHAEL/sarinya-system/backend && npm test -- --forceExit 2>&1 | tail -20)"
+      "Bash(cd /c/Users/MICHAEL/sarinya-system/backend && npm test -- --forceExit 2>&1 | tail -20)",
+      "Bash(ls \"C:\\\\Users\\\\MICHAEL\\\\sarinya-system\"/*.png 2>/dev/null || ls /c/Users/MICHAEL/sarinya-system/*.png 2>/dev/null)",
+      "Bash(node -e \"const {bin} = require\\('cloudflared'\\); console.log\\('bin:', bin\\); const fs = require\\('fs'\\); console.log\\('exists:', fs.existsSync\\(bin\\)\\);\")",
+      "Bash(node -e \"\nconst line = '2026-03-19T05:21:44Z INF |  https://ide-touch-neighbor-warning.trycloudflare.com                                      |';\nconst match = line.match\\(/https:\\\\/\\\\/[a-z0-9-]+\\\\.trycloudflare\\\\.com/\\);\nconsole.log\\('match:', match\\);\n\")",
+      "Bash(taskkill /F /IM cloudflared.exe 2>/dev/null; taskkill /F /IM node.exe 2>/dev/null; echo \"killed\")",
+      "Bash(netstat -ano)",
+      "Bash(xargs -r -I{} taskkill /F /PID {})",
+      "Bash(taskkill /F /IM cloudflared.exe)",
+      "Bash(taskkill /F /PID 8040 /PID 18500 /PID 7952 2>/dev/null; echo \"done\")",
+      "Bash(tasklist /FI \"PID eq 8040\" 2>/dev/null; tasklist /FI \"PID eq 18500\" 2>/dev/null)",
+      "Bash(cmd //c \"tasklist /FI \\\\\"PID eq 8040\\\\\" 2>nul && tasklist /FI \\\\\"PID eq 18500\\\\\" 2>nul\")",
+      "Bash(powershell -Command \"Get-Process -Id 8040,18500 | Select-Object Id,Name,Path\" 2>/dev/null)",
+      "Bash(powershell -Command \"Stop-Process -Id 8040,18500 -Force\" 2>/dev/null; echo \"done\")"
     ]
   }
 }

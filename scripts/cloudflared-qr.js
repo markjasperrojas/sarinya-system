@@ -1,16 +1,45 @@
 #!/usr/bin/env node
 const { spawn } = require('child_process');
 const fs = require('fs');
+const net = require('net');
 const qrcode = require('qrcode-terminal');
 const { bin: CLOUDFLARED, install } = require('cloudflared');
 
 const args = ['tunnel', '--url', 'http://localhost:3000'];
+
+function waitForPort(port, timeout = 120000) {
+  return new Promise((resolve, reject) => {
+    const start = Date.now();
+    function attempt() {
+      const socket = net.createConnection(port, 'localhost');
+      socket.once('connect', () => { socket.destroy(); resolve(); });
+      socket.once('error', () => {
+        socket.destroy();
+        if (Date.now() - start >= timeout) {
+          reject(new Error(`Timed out waiting for localhost:${port}`));
+        } else {
+          setTimeout(attempt, 1000);
+        }
+      });
+    }
+    attempt();
+  });
+}
 
 async function main() {
   if (!fs.existsSync(CLOUDFLARED)) {
     console.log('[cloudflared] Binary not found, downloading...');
     await install(CLOUDFLARED);
   }
+
+  console.log('[cloudflared] Waiting for React app on port 3000...');
+  try {
+    await waitForPort(3000);
+  } catch (err) {
+    console.warn('[cloudflared]', err.message);
+    process.exit(0);
+  }
+  console.log('[cloudflared] React app ready. Starting tunnel...');
 
   const proc = spawn(CLOUDFLARED, args, { stdio: ['ignore', 'pipe', 'pipe'] });
 
