@@ -420,6 +420,72 @@ exports.addItemsToSession = async (req, res) => {
   }
 };
 
+// UPDATE QUANTITY OF A PRODUCT IN SESSION (atomic swap: restore old, deduct new)
+exports.updateSessionItemQty = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { sessionId } = req.params;
+    const { productId, quantity } = req.body;
+
+    if (!productId || !quantity || quantity < 1) {
+      throw new AppError("Valid productId and quantity (≥ 1) required", 400);
+    }
+
+    const existingSales = await Sale.find({
+      saleSessionId: sessionId,
+      product: productId,
+      deletedAt: null,
+    })
+      .session(session)
+      .populate("product", "name");
+
+    if (existingSales.length === 0) throw new AppError("Product not found in this session", 404);
+
+    const oldTotal = existingSales.reduce((sum, s) => sum + s.quantity, 0);
+    if (quantity === oldTotal) {
+      await session.commitTransaction();
+      return res.json({ message: "No change needed" });
+    }
+
+    const notes = existingSales[0]?.notes || "";
+
+    // Restore inventory for all existing records
+    for (const sale of existingSales) {
+      if (sale.inventoryItemId) {
+        const batch = await Inventory.findById(sale.inventoryItemId).session(session);
+        if (batch) {
+          batch.quantity += sale.quantity;
+          batch.updatedAt = new Date();
+          await batch.save({ session });
+        }
+      }
+      sale.deletedAt = new Date();
+      await sale.save({ session });
+    }
+
+    // Re-create with new quantity using FEFO deduction
+    const deductions = await buildDeductions([{ productId, quantity }], session);
+    await applyDeductions(deductions, sessionId, notes, session);
+
+    await session.commitTransaction();
+
+    logActivity({
+      userId: req.user.id,
+      action: "edit",
+      module: "sales",
+      description: `Updated qty for product in session ${sessionId}: ${oldTotal} → ${quantity}`,
+    });
+
+    res.json({ message: "Item quantity updated!" });
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
+};
+
 // REMOVE ITEM FROM SESSION (restores inventory)
 exports.removeSessionItem = async (req, res) => {
   const session = await mongoose.startSession();
@@ -431,6 +497,14 @@ exports.removeSessionItem = async (req, res) => {
       .session(session)
       .populate("product", "name");
     if (!sale) throw new AppError("Sale item not found", 404);
+
+    const remainingCount = await Sale.countDocuments({
+      saleSessionId: sessionId,
+      deletedAt: null,
+      _id: { $ne: saleId },
+    }).session(session);
+    if (remainingCount === 0)
+      throw new AppError("Cannot remove the last item from an order", 400);
 
     if (sale.inventoryItemId) {
       const batch = await Inventory.findById(sale.inventoryItemId).session(session);

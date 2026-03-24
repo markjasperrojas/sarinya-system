@@ -6,6 +6,7 @@ import {
   getSessionDetail,
   addItemsToSession,
   removeSessionItem,
+  updateSessionItemQty,
 } from "../services/salesService";
 import {
   Utensils,
@@ -46,6 +47,9 @@ export default function SellPage() {
 
   // Notes state
   const [orderNotes, setOrderNotes] = useState("");
+
+  // Quantity overrides for existing session items (productId -> desired qty)
+  const [sessionItemQtyOverride, setSessionItemQtyOverride] = useState({});
 
   // Receipt state
   const [receiptSessionId, setReceiptSessionId] = useState(null);
@@ -158,6 +162,7 @@ export default function SellPage() {
       setSessionSales(data.sales);
       setOrderNotes(data.sales[0]?.notes || "");
       setOrderItems({});
+      setSessionItemQtyOverride({});
       setShowRecentPanel(false);
       setShowRecentSheet(false);
       setShowOrderSheet(true);
@@ -171,11 +176,19 @@ export default function SellPage() {
     setSessionSales([]);
     setOrderItems({});
     setOrderNotes("");
+    setSessionItemQtyOverride({});
   };
 
   const handleRemoveSessionItem = async (saleIds) => {
     // saleIds can be a single id or array (when product spans multiple batches)
     const ids = Array.isArray(saleIds) ? saleIds : [saleIds];
+
+    const remainingAfterRemoval = sessionSales.filter((s) => !ids.includes(s._id));
+    if (remainingAfterRemoval.length === 0) {
+      alert("Cannot remove the last item from an order.");
+      return;
+    }
+
     try {
       await Promise.all(ids.map((id) => removeSessionItem(editingSessionId, id)));
       setSessionSales((prev) => prev.filter((s) => !ids.includes(s._id)));
@@ -183,6 +196,20 @@ export default function SellPage() {
     } catch (err) {
       alert(err.response?.data?.error || "Failed to remove item");
     }
+  };
+
+  const handleSessionItemDecrement = (item) => {
+    const current = sessionItemQtyOverride[item.productId] ?? item.quantity;
+    if (current <= 1) return; // min 1; use trash to remove the item entirely
+    setSessionItemQtyOverride((prev) => ({ ...prev, [item.productId]: current - 1 }));
+  };
+
+  const handleSessionItemIncrement = (item) => {
+    const current = sessionItemQtyOverride[item.productId] ?? item.quantity;
+    // item.quantity units are already out of stock; only stockCounts extra are available
+    const maxQty = item.quantity + (stockCounts[item.productId] || 0);
+    if (current >= maxQty) return;
+    setSessionItemQtyOverride((prev) => ({ ...prev, [item.productId]: current + 1 }));
   };
 
   const handleUpdateOrder = async () => {
@@ -194,8 +221,14 @@ export default function SellPage() {
     const existingNotes = sessionSales[0]?.notes || "";
     const notesChanged = orderNotes !== existingNotes;
     const hasNewItems = newItems.length > 0;
+    const qtyChanges = sessionItemsList.filter(
+      (item) =>
+        sessionItemQtyOverride[item.productId] !== undefined &&
+        sessionItemQtyOverride[item.productId] !== item.quantity
+    );
+    const hasQtyChanges = qtyChanges.length > 0;
 
-    if (!hasNewItems && !notesChanged && sessionSales.length > 0) {
+    if (!hasNewItems && !notesChanged && !hasQtyChanges && sessionSales.length > 0) {
       // Nothing changed — just exit edit mode
       handleExitEditMode();
       setShowOrderSheet(false);
@@ -204,15 +237,27 @@ export default function SellPage() {
       return;
     }
 
-    if (!hasNewItems && sessionSales.length === 0) return;
+    if (!hasNewItems && !hasQtyChanges && sessionSales.length === 0) return;
 
     setProcessing(true);
     try {
-      await addItemsToSession(
-        editingSessionId,
-        hasNewItems ? newItems : [],
-        notesChanged ? orderNotes : undefined
-      );
+      // Apply quantity changes for existing items first
+      for (const item of qtyChanges) {
+        await updateSessionItemQty(
+          editingSessionId,
+          item.productId,
+          sessionItemQtyOverride[item.productId]
+        );
+      }
+
+      if (hasNewItems || notesChanged) {
+        await addItemsToSession(
+          editingSessionId,
+          hasNewItems ? newItems : [],
+          notesChanged ? orderNotes : undefined
+        );
+      }
+
       const sid = editingSessionId;
       handleExitEditMode();
       setShowOrderSheet(false);
@@ -255,7 +300,10 @@ export default function SellPage() {
     }
   });
   const sessionItemsList = Object.values(sessionItemsMap);
-  const sessionTotal = sessionItemsList.reduce((sum, s) => sum + s.price * s.quantity, 0);
+  const sessionTotal = sessionItemsList.reduce((sum, s) => {
+    const qty = sessionItemQtyOverride[s.productId] ?? s.quantity;
+    return sum + s.price * qty;
+  }, 0);
   const combinedTotal = sessionTotal + newItemsTotal;
 
   const filtered = products
@@ -391,30 +439,55 @@ export default function SellPage() {
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
             Already ordered
           </p>
-          {sessionItemsList.map((item) => (
-            <div
-              key={item.productId}
-              className="flex items-center gap-2 py-2 border-b border-gray-50 last:border-0"
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {item.name}
-                </p>
-                <p className="text-xs text-gray-500">
-                  ₱{item.price?.toLocaleString()} × {item.quantity} ={" "}
-                  <span className="font-semibold text-gray-700">
-                    ₱{(item.price * item.quantity).toLocaleString()}
-                  </span>
-                </p>
-              </div>
-              <button
-                onClick={() => handleRemoveSessionItem(item.saleIds)}
-                className="w-6 h-6 rounded-md hover:bg-red-50 flex items-center justify-center transition-colors flex-shrink-0"
+          {sessionItemsList.map((item) => {
+            const effectiveQty = sessionItemQtyOverride[item.productId] ?? item.quantity;
+            const isLastItem = sessionItemsList.length === 1 && orderList.length === 0;
+            const maxQty = item.quantity + (stockCounts[item.productId] || 0);
+            return (
+              <div
+                key={item.productId}
+                className="flex items-center gap-2 py-2 border-b border-gray-50 last:border-0"
               >
-                <Trash2 className="w-3 h-3 text-red-400" />
-              </button>
-            </div>
-          ))}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {item.name}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    ₱{item.price?.toLocaleString()} × {effectiveQty} ={" "}
+                    <span className="font-semibold text-gray-700">
+                      ₱{(item.price * effectiveQty).toLocaleString()}
+                    </span>
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    onClick={() => handleSessionItemDecrement(item)}
+                    disabled={effectiveQty <= 1}
+                    className="w-6 h-6 rounded-md bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Minus className="w-3 h-3 text-gray-600" />
+                  </button>
+                  <span className="w-6 text-center text-sm font-semibold text-gray-900">
+                    {effectiveQty}
+                  </span>
+                  <button
+                    onClick={() => handleSessionItemIncrement(item)}
+                    disabled={effectiveQty >= maxQty}
+                    className="w-6 h-6 rounded-md bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Plus className="w-3 h-3 text-gray-600" />
+                  </button>
+                  <button
+                    onClick={() => handleRemoveSessionItem(item.saleIds)}
+                    disabled={isLastItem}
+                    className="w-6 h-6 rounded-md hover:bg-red-50 flex items-center justify-center transition-colors flex-shrink-0 ml-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="w-3 h-3 text-red-400" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

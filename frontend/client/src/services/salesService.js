@@ -19,3 +19,8 @@ export const removeSessionItem = async (sessionId, saleId) => {
   const res = await API.delete(`/sales/sessions/${sessionId}/remove-item/${saleId}`);
   return res.data;
 };
+
+export const updateSessionItemQty = async (sessionId, productId, quantity) => {
+  const res = await API.patch(`/sales/sessions/${sessionId}/update-item-qty`, { productId, quantity });
+  return res.data;
+};
