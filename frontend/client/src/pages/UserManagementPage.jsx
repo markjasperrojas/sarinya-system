@@ -22,6 +22,7 @@ import {
   UserX,
   Search,
   X,
+  Mail,
 } from "lucide-react";
 
 export default function UserManagementPage() {
@@ -39,6 +40,7 @@ export default function UserManagementPage() {
     password: "",
     role: "staff",
     isActive: true,
+    email: "",
   });
   const [adding, setAdding] = useState(false);
 
@@ -75,7 +77,7 @@ export default function UserManagementPage() {
     try {
       await createUser(addForm);
       setIsAddModalOpen(false);
-      setAddForm({ username: "", password: "", role: "staff", isActive: true });
+      setAddForm({ username: "", password: "", role: "staff", isActive: true, email: "" });
       loadUsers();
     } catch (error) {
       console.error("Failed to create user:", error);
@@ -100,6 +102,7 @@ export default function UserManagementPage() {
         username: editForm.username,
         role: editForm.role,
         isActive: editForm.isActive,
+        email: editForm.email || "",
       };
 
       if (editForm.password) {
@@ -379,6 +382,17 @@ export default function UserManagementPage() {
             required
           />
 
+          <Input
+            label="Email address (optional)"
+            type="email"
+            placeholder="Enter email for password recovery"
+            icon={Mail}
+            value={addForm.email}
+            onChange={(e) =>
+              setAddForm({ ...addForm, email: e.target.value })
+            }
+          />
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Role
@@ -444,6 +458,17 @@ export default function UserManagementPage() {
               value={editForm.password}
               onChange={(e) =>
                 setEditForm({ ...editForm, password: e.target.value })
+              }
+            />
+
+            <Input
+              label="Email address (optional)"
+              type="email"
+              placeholder="Enter email for password recovery"
+              icon={Mail}
+              value={editForm.email || ""}
+              onChange={(e) =>
+                setEditForm({ ...editForm, email: e.target.value })
               }
             />
 

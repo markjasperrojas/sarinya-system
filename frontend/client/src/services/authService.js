@@ -20,6 +20,16 @@ export const logout = () => {
   setAuthToken(null);
 };
 
+export const forgotPassword = async (email) => {
+  const res = await API.post("/auth/forgot-password", { email });
+  return res.data;
+};
+
+export const resetPassword = async (userId, token, newPassword) => {
+  const res = await API.post("/auth/reset-password", { userId, token, newPassword });
+  return res.data;
+};
+
 export const getStoredUser = () => {
   const storedUser = localStorage.getItem("sarinya_user");
   if (storedUser) {

@@ -25,6 +25,21 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    email: {
+      type: String,
+      default: null,
+      sparse: true,
+      lowercase: true,
+      trim: true,
+    },
+    resetPasswordToken: {
+      type: String,
+      default: null,
+    },
+    resetPasswordExpires: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

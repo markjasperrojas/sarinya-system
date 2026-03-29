@@ -29,7 +29,7 @@ exports.getProfile = async (req, res) => {
 
 // Create new user
 exports.createUser = async (req, res) => {
-  const { username, password, role, isActive } = req.body;
+  const { username, password, role, isActive, email } = req.body;
 
   // Check if username already exists (among non-deleted users)
   const existingUser = await User.findOne({ username, deletedAt: null });
@@ -45,6 +45,7 @@ exports.createUser = async (req, res) => {
     password: hashedPassword,
     role: role || "staff",
     isActive: isActive !== undefined ? isActive : true,
+    email: email || null,
   });
 
   await newUser.save();
@@ -66,7 +67,7 @@ exports.createUser = async (req, res) => {
 
 // Update user
 exports.updateUser = async (req, res) => {
-  const { username, password, role, isActive } = req.body;
+  const { username, password, role, isActive, email } = req.body;
 
   const user = await User.findOne({ _id: req.params.id, deletedAt: null });
 
@@ -96,6 +97,11 @@ exports.updateUser = async (req, res) => {
   // Update isActive if provided
   if (isActive !== undefined) {
     user.isActive = isActive;
+  }
+
+  // Update email if provided (allow clearing with empty string)
+  if (email !== undefined) {
+    user.email = email || null;
   }
 
   await user.save();

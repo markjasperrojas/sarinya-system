@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import API from "../api";
 import { User, Lock, AlertCircle } from "lucide-react";
@@ -98,12 +98,21 @@ export default function LoginPage() {
             autoComplete="current-password"
           />
 
+          <div className="flex justify-end -mt-2">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+            >
+              Forgot password?
+            </Link>
+          </div>
+
           <Button
             type="submit"
             loading={loading}
             fullWidth
             size="large"
-            className="mt-6"
+            className="mt-2"
           >
             Sign In
           </Button>
