@@ -21,9 +21,11 @@ import {
   ChevronUp,
   Clock,
   ArrowLeft,
+  Receipt,
 } from "lucide-react";
 import API from "../api";
 import { PRODUCT_CATEGORIES } from "../constants/categories";
+import ReceiptModal from "../components/ReceiptModal";
 
 export default function SellPage() {
   const [products, setProducts] = useState([]);
@@ -42,6 +44,10 @@ export default function SellPage() {
   const [sessionSales, setSessionSales] = useState([]); // existing committed sale records
   const [showRecentPanel, setShowRecentPanel] = useState(false); // desktop toggle
   const [showRecentSheet, setShowRecentSheet] = useState(false); // mobile sheet
+
+  // Receipt modal state
+  const [receiptSessionId, setReceiptSessionId] = useState(null);
+  const [showReceipt, setShowReceipt] = useState(false);
 
   // Notes state
   const [orderNotes, setOrderNotes] = useState("");
@@ -138,6 +144,7 @@ export default function SellPage() {
       setOrderNotes("");
       setShowOrderSheet(false);
       await loadData();
+      setReceiptSessionId(data.saleSessionId);
       setSuccessMsg("Order processed!");
       setTimeout(() => setSuccessMsg(""), 4000);
     } catch (err) {
@@ -379,47 +386,79 @@ export default function SellPage() {
 
   // ── Recent sessions list (shared between desktop panel and mobile sheet) ──
 
-  const RecentSessionsList = () =>
-    recentSessions.length === 0 ? (
+  const RecentSessionsList = () => {
+    const [search, setSearch] = useState("");
+    const filtered = recentSessions.filter((s) =>
+      s._id.slice(-6).toUpperCase().includes(search.toUpperCase())
+    );
+
+    return recentSessions.length === 0 ? (
       <p className="text-xs text-gray-400 text-center py-4">No orders today yet</p>
     ) : (
-      <div className="space-y-1">
-        {recentSessions.map((s) => {
-          const time = new Date(s.createdAt).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-          const preview = s.items
-            .slice(0, 2)
-            .map((i) => i.productName)
-            .join(", ");
-          const more = s.items.length > 2 ? ` +${s.items.length - 2}` : "";
-          return (
-            <button
-              key={s._id}
-              onClick={() => handleOpenSession(s)}
-              className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-700">{time}</span>
-                <span className="text-xs font-bold text-primary-600">
-                  ₱{s.total.toLocaleString()}
-                </span>
-              </div>
-              <p className="text-xs text-gray-400 truncate mt-0.5">
-                {preview}
-                {more}
-              </p>
-              {s.notes && (
-                <p className="text-xs text-amber-600 truncate mt-0.5 italic">
-                  {s.notes}
-                </p>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      <>
+        <div className="mb-2 relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by order #"
+            className="w-full pl-7 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:border-primary-400 focus:ring-2 focus:ring-primary-100 focus:outline-none"
+          />
+        </div>
+        {filtered.length === 0 ? (
+          <p className="text-xs text-gray-400 text-center py-3">No orders match</p>
+        ) : (
+          <div className="space-y-1">
+            {filtered.map((s) => {
+              const preview = s.items
+                .slice(0, 2)
+                .map((i) => i.productName)
+                .join(", ");
+              const more = s.items.length > 2 ? ` +${s.items.length - 2}` : "";
+              return (
+                <div key={s._id} className="flex items-center gap-1 border border-gray-100 rounded-lg">
+                  <button
+                    onClick={() => handleOpenSession(s)}
+                    className="flex-1 text-left px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors min-w-0"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-700">
+                        #{s._id.slice(-6).toUpperCase()}
+                      </span>
+                      <span className="text-xs font-bold text-primary-600">
+                        ₱{s.total.toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 truncate mt-0.5">
+                      {preview}
+                      {more}
+                    </p>
+                    {s.notes && (
+                      <p className="text-xs text-amber-600 truncate mt-0.5 italic">
+                        {s.notes}
+                      </p>
+                    )}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setReceiptSessionId(s._id);
+                      setShowReceipt(true);
+                    }}
+                    className="p-2 mr-1 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 transition-colors flex-shrink-0"
+                    title="View Receipt"
+                  >
+                    <Receipt className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </>
     );
+  };
 
   // ── Order panel content (desktop right panel + inside mobile sheet) ────────
 
@@ -759,9 +798,19 @@ export default function SellPage() {
             />
 
             {successMsg && (
-              <div className="flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-sm font-medium">
-                <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                {successMsg}
+              <div className="flex items-center justify-between gap-2 text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-sm font-medium">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                  {successMsg}
+                </div>
+                {receiptSessionId && (
+                  <button
+                    onClick={() => setShowReceipt(true)}
+                    className="text-xs text-green-700 underline underline-offset-2 hover:text-green-900 flex-shrink-0"
+                  >
+                    View Receipt
+                  </button>
+                )}
               </div>
             )}
 
@@ -966,6 +1015,11 @@ export default function SellPage() {
         </div>
       )}
 
+      <ReceiptModal
+        isOpen={showReceipt}
+        onClose={() => setShowReceipt(false)}
+        sessionId={receiptSessionId}
+      />
     </>
   );
 }

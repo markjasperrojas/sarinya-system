@@ -1,7 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cd C:/Users/MICHAEL/sarinya-system/backend && npm install nodemailer)"
+      "Bash(cd C:/Users/MICHAEL/sarinya-system/backend && npm install nodemailer)",
+      "Bash(find /c/Users/MICHAEL/sarinya-system -type f \\\\\\( -name \"*.js\" -o -name \"*.ts\" \\\\\\) | xargs grep -l \"pdf\\\\|PDF\\\\|print\\\\|Print\" 2>/dev/null | head -20)",
+      "Bash(grep -r \"order\\\\|receipt\\\\|invoice\\\\|history\" /c/Users/MICHAEL/sarinya-system/frontend/client/src/pages/*.jsx | head -20)",
+      "Bash(git -C /c/Users/MICHAEL/sarinya-system log --all --oneline --grep=\"receipt\" -i)",
+      "Bash(git -C /c/Users/MICHAEL/sarinya-system show 60edb4d --stat)",
+      "Bash(git -C /c/Users/MICHAEL/sarinya-system show 60edb4d --name-only)",
+      "Bash(git -C /c/Users/MICHAEL/sarinya-system show 60edb4d:frontend/client/src/components/ReceiptModal.jsx)",
+      "Bash(git -C /c/Users/MICHAEL/sarinya-system show 60edb4d^:frontend/client/src/components/ReceiptModal.jsx)",
+      "Bash(find /c/Users/MICHAEL/sarinya-system/frontend/client/src -name \"*.jsx\" | xargs grep -l \"Tab\\\\|tab\" | head -10)",
+      "Bash(ls -la /c/Users/MICHAEL/sarinya-system/frontend/client/src/*.jsx)",
+      "Bash(git -C /c/Users/MICHAEL/sarinya-system log --all --oneline | grep -i \"tab\\\\|history\" | head -10)",
+      "Bash(find /c/Users/MICHAEL/sarinya-system -type f -name \"*.jsx\" | xargs grep -l \"SellPage\\\\|Take Order\" | head -5)"
     ]
   }
 }
