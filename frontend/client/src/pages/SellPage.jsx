@@ -20,11 +20,9 @@ import {
   ImageOff,
   ChevronUp,
   Clock,
-  Receipt,
   ArrowLeft,
 } from "lucide-react";
 import API from "../api";
-import ReceiptModal from "../components/ReceiptModal";
 import { PRODUCT_CATEGORIES } from "../constants/categories";
 
 export default function SellPage() {
@@ -51,9 +49,6 @@ export default function SellPage() {
   // Quantity overrides for existing session items (productId -> desired qty)
   const [sessionItemQtyOverride, setSessionItemQtyOverride] = useState({});
 
-  // Receipt state
-  const [receiptSessionId, setReceiptSessionId] = useState(null);
-  const [showReceipt, setShowReceipt] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -142,7 +137,6 @@ export default function SellPage() {
       setOrderItems({});
       setOrderNotes("");
       setShowOrderSheet(false);
-      setReceiptSessionId(data.saleSessionId);
       await loadData();
       setSuccessMsg("Order processed!");
       setTimeout(() => setSuccessMsg(""), 4000);
@@ -258,10 +252,8 @@ export default function SellPage() {
         );
       }
 
-      const sid = editingSessionId;
       handleExitEditMode();
       setShowOrderSheet(false);
-      setReceiptSessionId(sid);
       await loadData();
       setSuccessMsg("Order updated!");
       setTimeout(() => setSuccessMsg(""), 4000);
@@ -784,16 +776,6 @@ export default function SellPage() {
                 >
                   {processing ? "Updating..." : "Update Order"}
                 </button>
-                <button
-                  onClick={() => {
-                    setReceiptSessionId(editingSessionId);
-                    setShowReceipt(true);
-                  }}
-                  className="w-full py-2 rounded-xl font-medium text-sm text-gray-600 border border-gray-300 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <Receipt className="w-4 h-4" />
-                  View Receipt
-                </button>
               </>
             ) : (
               <>
@@ -808,15 +790,6 @@ export default function SellPage() {
                     ? "Processing..."
                     : `Process Order · ₱${newItemsTotal.toLocaleString()}`}
                 </button>
-                {receiptSessionId && (
-                  <button
-                    onClick={() => setShowReceipt(true)}
-                    className="w-full py-2 rounded-xl font-medium text-sm text-gray-600 border border-gray-300 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    <Receipt className="w-4 h-4" />
-                    View Last Receipt
-                  </button>
-                )}
               </>
             )}
           </div>
@@ -889,16 +862,6 @@ export default function SellPage() {
               <div className="flex items-center gap-3">
                 {editingSessionId ? (
                   <>
-                    <button
-                      onClick={() => {
-                        setReceiptSessionId(editingSessionId);
-                        setShowReceipt(true);
-                      }}
-                      className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"
-                    >
-                      <Receipt className="w-3.5 h-3.5" />
-                      Receipt
-                    </button>
                     <button
                       onClick={() => {
                         handleExitEditMode();
@@ -1003,12 +966,6 @@ export default function SellPage() {
         </div>
       )}
 
-      {/* Receipt Modal */}
-      <ReceiptModal
-        isOpen={showReceipt}
-        onClose={() => setShowReceipt(false)}
-        sessionId={receiptSessionId}
-      />
     </>
   );
 }

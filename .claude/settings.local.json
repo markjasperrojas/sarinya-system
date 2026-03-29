@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(cd C:/Users/MICHAEL/sarinya-system/backend && npx jest __tests__/controllers/salesController.test.js --no-coverage 2>&1)"
-    ]
-  }
-}
