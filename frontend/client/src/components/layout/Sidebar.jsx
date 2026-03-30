@@ -27,13 +27,21 @@ export default function Sidebar() {
   return (
     <aside className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:w-64 bg-white border-r border-gray-200 z-50">
       {/* Logo/Brand Header */}
-      <div className="flex items-center gap-3 px-6 h-16 border-b border-gray-200">
+      <div className={`flex items-center gap-3 px-6 h-16 border-b flex-shrink-0 ${
+        isAdmin()
+          ? "bg-gradient-to-r from-purple-700 to-purple-800 border-purple-900"
+          : "border-gray-200"
+      }`}>
         <div className="w-10 h-10 flex-shrink-0">
           <img src="/apple-touch-icon.png" alt="Sarinya Logo" className="w-full h-full object-contain" />
         </div>
         <div>
-          <h1 className="text-lg font-bold text-gray-900">Sarinya</h1>
-          <p className="text-xs text-gray-500">Kitchenette</p>
+          <h1 className={`text-lg font-bold ${isAdmin() ? "text-white" : "text-gray-900"}`}>
+            Sarinya
+          </h1>
+          <p className={`text-xs ${isAdmin() ? "text-purple-200" : "text-gray-500"}`}>
+            Kitchenette
+          </p>
         </div>
       </div>
 
@@ -67,8 +75,12 @@ export default function Sidebar() {
       {/* User Info + Logout */}
       <div className="px-4 py-4 border-t border-gray-200">
         <div className="flex items-center gap-3 px-4 py-3 mb-3 bg-gray-50 rounded-xl">
-          <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-            <span className="text-primary-600 font-semibold text-sm">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+            isAdmin() ? "bg-purple-100" : "bg-primary-100"
+          }`}>
+            <span className={`font-semibold text-sm ${
+              isAdmin() ? "text-purple-600" : "text-primary-600"
+            }`}>
               {user?.username?.charAt(0).toUpperCase()}
             </span>
           </div>
@@ -76,7 +88,13 @@ export default function Sidebar() {
             <p className="text-sm font-medium text-gray-900 truncate">
               {user?.username}
             </p>
-            <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+            <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${
+              isAdmin()
+                ? "bg-purple-100 text-purple-700"
+                : "bg-blue-100 text-blue-700"
+            }`}>
+              {user?.role}
+            </span>
           </div>
         </div>
         <button

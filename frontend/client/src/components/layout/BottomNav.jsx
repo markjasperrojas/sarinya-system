@@ -47,11 +47,19 @@ export default function BottomNav() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Drawer Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-              <span className="text-sm font-semibold text-gray-700">More</span>
+            <div className={`flex items-center justify-between px-4 py-3 border-b ${
+              isAdmin()
+                ? "bg-gradient-to-r from-purple-700 to-purple-800 border-purple-900"
+                : "border-gray-100"
+            }`}>
+              <span className={`text-sm font-semibold ${isAdmin() ? "text-white" : "text-gray-700"}`}>
+                More
+              </span>
               <button
                 onClick={closeDrawer}
-                className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                className={`p-1 transition-colors ${
+                  isAdmin() ? "text-purple-200 hover:text-white" : "text-gray-400 hover:text-gray-600"
+                }`}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -105,8 +113,12 @@ export default function BottomNav() {
             {/* Profile Section */}
             <div className="px-4 py-3">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center shrink-0">
-                  <span className="text-primary-600 font-semibold text-sm">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                  isAdmin() ? "bg-purple-100" : "bg-primary-100"
+                }`}>
+                  <span className={`font-semibold text-sm ${
+                    isAdmin() ? "text-purple-600" : "text-primary-600"
+                  }`}>
                     {user?.username?.charAt(0).toUpperCase()}
                   </span>
                 </div>
@@ -114,9 +126,13 @@ export default function BottomNav() {
                   <p className="text-sm font-medium text-gray-900 truncate">
                     {user?.username}
                   </p>
-                  <p className="text-xs text-gray-500 capitalize">
+                  <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${
+                    isAdmin()
+                      ? "bg-purple-100 text-purple-700"
+                      : "bg-blue-100 text-blue-700"
+                  }`}>
                     {user?.role}
-                  </p>
+                  </span>
                 </div>
               </div>
 
@@ -138,7 +154,9 @@ export default function BottomNav() {
       <FeedbackModal isOpen={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
 
       {/* Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 safe-area-bottom">
+      <nav className={`md:hidden fixed bottom-0 left-0 right-0 bg-white z-40 safe-area-bottom ${
+        isAdmin() ? "border-t-2 border-purple-500" : "border-t border-gray-200"
+      }`}>
         <div className="flex items-center justify-around h-16">
           <NavItem
             to="/dashboard"
