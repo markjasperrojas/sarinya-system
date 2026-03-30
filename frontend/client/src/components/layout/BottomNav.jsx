@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 
 export default function BottomNav() {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, isStaff } = useAuth();
   const navigate = useNavigate();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -47,19 +47,23 @@ export default function BottomNav() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Drawer Header */}
-            <div className={`flex items-center justify-between px-4 py-3 border-b ${
-              isAdmin()
-                ? "bg-gradient-to-r from-purple-700 to-purple-800 border-purple-900"
-                : "border-gray-100"
-            }`}>
-              <span className={`text-sm font-semibold ${isAdmin() ? "text-white" : "text-gray-700"}`}>
-                More
-              </span>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-gray-700">More</span>
+                {isAdmin() && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 bg-red-100 px-1.5 py-0.5 rounded">
+                    Admin
+                  </span>
+                )}
+                {isStaff() && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">
+                    Staff
+                  </span>
+                )}
+              </div>
               <button
                 onClick={closeDrawer}
-                className={`p-1 transition-colors ${
-                  isAdmin() ? "text-purple-200 hover:text-white" : "text-gray-400 hover:text-gray-600"
-                }`}
+                className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -126,13 +130,6 @@ export default function BottomNav() {
                   <p className="text-sm font-medium text-gray-900 truncate">
                     {user?.username}
                   </p>
-                  <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${
-                    isAdmin()
-                      ? "bg-purple-100 text-purple-700"
-                      : "bg-blue-100 text-blue-700"
-                  }`}>
-                    {user?.role}
-                  </span>
                 </div>
               </div>
 

@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 export default function Sidebar() {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, isStaff } = useAuth();
   const navigate = useNavigate();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
@@ -27,21 +27,25 @@ export default function Sidebar() {
   return (
     <aside className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:w-64 bg-white border-r border-gray-200 z-50">
       {/* Logo/Brand Header */}
-      <div className={`flex items-center gap-3 px-6 h-16 border-b flex-shrink-0 ${
-        isAdmin()
-          ? "bg-gradient-to-r from-purple-700 to-purple-800 border-purple-900"
-          : "border-gray-200"
-      }`}>
+      <div className="flex items-center gap-3 px-6 h-16 border-b border-gray-200 flex-shrink-0">
         <div className="w-10 h-10 flex-shrink-0">
           <img src="/apple-touch-icon.png" alt="Sarinya Logo" className="w-full h-full object-contain" />
         </div>
-        <div>
-          <h1 className={`text-lg font-bold ${isAdmin() ? "text-white" : "text-gray-900"}`}>
-            Sarinya
-          </h1>
-          <p className={`text-xs ${isAdmin() ? "text-purple-200" : "text-gray-500"}`}>
-            Kitchenette
-          </p>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-bold text-gray-900">Sarinya</h1>
+            {isAdmin() && (
+              <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 bg-red-100 px-1.5 py-0.5 rounded">
+                Admin
+              </span>
+            )}
+            {isStaff() && (
+              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">
+                Staff
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-gray-500">Kitchenette</p>
         </div>
       </div>
 
@@ -88,13 +92,6 @@ export default function Sidebar() {
             <p className="text-sm font-medium text-gray-900 truncate">
               {user?.username}
             </p>
-            <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${
-              isAdmin()
-                ? "bg-purple-100 text-purple-700"
-                : "bg-blue-100 text-blue-700"
-            }`}>
-              {user?.role}
-            </span>
           </div>
         </div>
         <button
