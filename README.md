@@ -2,6 +2,8 @@
 
 Sarinya System is a collaborative restaurant operations application for Sarinya Restaurant. It brings product and stock records, stock movement, order entry, sales history, and staff access management into one web app, helping the team keep day-to-day inventory and sales information together.
 
+🔗 **Live Demo:** https://sarinya.vercel.app/
+
 ## Features
 
 - Manage products, prices, categories, and product images.
